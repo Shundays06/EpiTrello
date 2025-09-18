@@ -1,40 +1,40 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const cors = require('cors');
+const express = require('express')
+const dotenv = require('dotenv')
+const cors = require('cors')
 
-dotenv.config();
+dotenv.config()
 
-const app = express();
-const port = process.env.PORT || 3001;
+const app = express()
+const port = process.env.PORT || 3001
 
 // Configuration CORS
 app.use(cors({
   origin: 'http://localhost:3000', // URL du frontend Next.js
   credentials: true
-}));
+}))
 
-app.use(express.json());
+app.use(express.json())
 
 // Stockage en mémoire pour simuler la base de données
-let inMemoryColumns = [];
-let inMemoryCards = [];
-let nextColumnId = 1;
-let nextCardId = 1;
+let inMemoryColumns = []
+const inMemoryCards = []
+let nextColumnId = 1
+let nextCardId = 1
 
 // Modèle de colonnes de base
 const defaultColumns = [
   { name: 'À faire', position: 1 },
   { name: 'En cours', position: 2 },
   { name: 'Terminé', position: 3 }
-];
+]
 
 // Essayer de se connecter à PostgreSQL, sinon utiliser le stockage en mémoire
-let useDatabase = true; // Activer PostgreSQL par défaut
-let pool = null;
+let useDatabase = true // Activer PostgreSQL par défaut
+let pool = null
 
 try {
-  const { Pool } = require('pg');
-  
+  const { Pool } = require('pg')
+
   // Configuration de la connexion PostgreSQL avec les variables d'environnement
   pool = new Pool({
     host: process.env.PGHOST || 'localhost',
@@ -43,29 +43,28 @@ try {
     database: process.env.PGDATABASE || 'epitrello',
     port: process.env.PGPORT || 5432,
     // Options supplémentaires pour une meilleure gestion
-    max: 20,                    // Nombre maximum de clients dans le pool
-    idleTimeoutMillis: 30000,   // Temps avant fermeture d'une connexion inactive
-    connectionTimeoutMillis: 2000, // Temps limite pour établir une connexion
-  });
+    max: 20, // Nombre maximum de clients dans le pool
+    idleTimeoutMillis: 30000, // Temps avant fermeture d'une connexion inactive
+    connectionTimeoutMillis: 2000 // Temps limite pour établir une connexion
+  })
 
   // Test de connexion
   pool.query('SELECT NOW()', (err, res) => {
     if (err) {
-      console.error('❌ Erreur de connexion PostgreSQL:', err.message);
-      useDatabase = false;
-      console.log('⚠️ Basculement vers le stockage en mémoire');
+      console.error('❌ Erreur de connexion PostgreSQL:', err.message)
+      useDatabase = false
+      console.log('⚠️ Basculement vers le stockage en mémoire')
     } else {
-      console.log('✅ Connexion à PostgreSQL établie avec succès');
-      console.log('📊 Base de données:', process.env.PGDATABASE);
-      console.log('👤 Utilisateur:', process.env.PGUSER);
-      useDatabase = true;
+      console.log('✅ Connexion à PostgreSQL établie avec succès')
+      console.log('📊 Base de données:', process.env.PGDATABASE)
+      console.log('👤 Utilisateur:', process.env.PGUSER)
+      useDatabase = true
     }
-  });
-
+  })
 } catch (error) {
-  console.error('❌ Erreur lors de l\'initialisation PostgreSQL:', error.message);
-  useDatabase = false;
-  console.log('⚠️ PostgreSQL non disponible, utilisation du stockage en mémoire');
+  console.error('❌ Erreur lors de l\'initialisation PostgreSQL:', error.message)
+  useDatabase = false
+  console.log('⚠️ PostgreSQL non disponible, utilisation du stockage en mémoire')
 }
 
 // Route pour créer les colonnes de base
@@ -73,32 +72,32 @@ app.post('/api/columns/create-default', async (req, res) => {
   try {
     if (useDatabase && pool) {
       // Utiliser PostgreSQL - les tables existent déjà grâce au script init_database.sql
-      const client = await pool.connect();
-      
+      const client = await pool.connect()
+
       // Vérifier si les colonnes de base existent déjà
-      const existingColumns = await client.query('SELECT * FROM columns ORDER BY position');
-      
+      const existingColumns = await client.query('SELECT * FROM columns ORDER BY position')
+
       if (existingColumns.rows.length === 0) {
         // Insérer les colonnes de base avec l'ID du board par défaut (board_id = 1)
-        const defaultBoardId = 1;
-        const insertPromises = defaultColumns.map(col => 
+        const defaultBoardId = 1
+        const insertPromises = defaultColumns.map(col =>
           client.query(
             'INSERT INTO columns (name, position, board_id) VALUES ($1, $2, $3)',
             [col.name, col.position, defaultBoardId]
           )
-        );
-        
-        await Promise.all(insertPromises);
+        )
+
+        await Promise.all(insertPromises)
       }
 
-      const result = await client.query('SELECT * FROM columns ORDER BY position');
-      client.release();
+      const result = await client.query('SELECT * FROM columns ORDER BY position')
+      client.release()
 
       res.json({
         success: true,
         message: 'Colonnes de base créées avec succès',
         columns: result.rows
-      });
+      })
     } else {
       // Utiliser le stockage en mémoire
       if (inMemoryColumns.length === 0) {
@@ -107,172 +106,172 @@ app.post('/api/columns/create-default', async (req, res) => {
           name: col.name,
           position: col.position,
           created_at: new Date().toISOString()
-        }));
+        }))
       }
 
       res.json({
         success: true,
         message: 'Colonnes de base créées avec succès (stockage mémoire)',
         columns: inMemoryColumns
-      });
+      })
     }
   } catch (error) {
-    console.error('Erreur lors de la création des colonnes:', error);
+    console.error('Erreur lors de la création des colonnes:', error)
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la création des colonnes',
       error: error.message
-    });
+    })
   }
-});
+})
 
 // Route pour récupérer toutes les colonnes
 app.get('/api/columns', async (req, res) => {
   try {
     if (useDatabase && pool) {
       // Utiliser PostgreSQL
-      const client = await pool.connect();
-      const result = await client.query('SELECT * FROM columns ORDER BY position');
-      client.release();
+      const client = await pool.connect()
+      const result = await client.query('SELECT * FROM columns ORDER BY position')
+      client.release()
 
       res.json({
         success: true,
         columns: result.rows
-      });
+      })
     } else {
       // Utiliser le stockage en mémoire
       res.json({
         success: true,
         columns: inMemoryColumns
-      });
+      })
     }
   } catch (error) {
-    console.error('Erreur lors de la récupération des colonnes:', error);
+    console.error('Erreur lors de la récupération des colonnes:', error)
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des colonnes',
       error: error.message
-    });
+    })
   }
-});
+})
 
 // Route pour créer une carte personnalisée
 app.post('/api/cards', async (req, res) => {
   try {
-    const { title, description, column_id } = req.body;
+    const { title, description, column_id } = req.body
 
     if (!title || !title.trim()) {
       return res.status(400).json({
         success: false,
         message: 'Le titre de la carte est obligatoire'
-      });
+      })
     }
 
     if (!column_id) {
       return res.status(400).json({
         success: false,
         message: 'L\'ID de la colonne est obligatoire'
-      });
+      })
     }
 
     if (useDatabase && pool) {
       // Utiliser PostgreSQL
-      const client = await pool.connect();
-      
+      const client = await pool.connect()
+
       // Vérifier que la colonne existe
-      const columnCheck = await client.query('SELECT id FROM columns WHERE id = $1', [column_id]);
+      const columnCheck = await client.query('SELECT id FROM columns WHERE id = $1', [column_id])
       if (columnCheck.rows.length === 0) {
-        client.release();
+        client.release()
         return res.status(400).json({
           success: false,
           message: 'Colonne introuvable'
-        });
+        })
       }
 
       // Obtenir la position suivante pour cette colonne
       const positionResult = await client.query(
         'SELECT COALESCE(MAX(position), 0) + 1 as next_position FROM cards WHERE column_id = $1',
         [column_id]
-      );
-      const nextPosition = positionResult.rows[0].next_position;
+      )
+      const nextPosition = positionResult.rows[0].next_position
 
       const insertResult = await client.query(`
         INSERT INTO cards (title, description, column_id, position)
         VALUES ($1, $2, $3, $4)
         RETURNING *, (SELECT name FROM columns WHERE id = $3) as column_name
-      `, [title.trim(), description ? description.trim() : null, column_id, nextPosition]);
+      `, [title.trim(), description ? description.trim() : null, column_id, nextPosition])
 
-      client.release();
+      client.release()
 
       res.json({
         success: true,
         message: 'Carte créée avec succès',
         card: insertResult.rows[0]
-      });
+      })
     } else {
       // Utiliser le stockage en mémoire
-      const column = inMemoryColumns.find(col => col.id === column_id);
+      const column = inMemoryColumns.find(col => col.id === column_id)
       if (!column) {
         return res.status(400).json({
           success: false,
           message: 'Colonne introuvable'
-        });
+        })
       }
 
       const card = {
         id: nextCardId++,
         title: title.trim(),
         description: description ? description.trim() : '',
-        column_id: column_id,
+        column_id,
         position: inMemoryCards.filter(c => c.column_id === column_id).length + 1,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         column_name: column.name
-      };
+      }
 
-      inMemoryCards.push(card);
+      inMemoryCards.push(card)
 
       res.json({
         success: true,
         message: 'Carte créée avec succès (stockage mémoire)',
-        card: card
-      });
+        card
+      })
     }
   } catch (error) {
-    console.error('Erreur lors de la création de la carte:', error);
+    console.error('Erreur lors de la création de la carte:', error)
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la création de la carte',
       error: error.message
-    });
+    })
   }
-});
+})
 
 // Route pour créer une carte de test
 app.post('/api/cards/create-test', async (req, res) => {
   try {
     if (useDatabase && pool) {
       // Utiliser PostgreSQL - les tables existent déjà grâce au script init_database.sql
-      const client = await pool.connect();
-      
+      const client = await pool.connect()
+
       // Récupérer l'ID de la première colonne (À faire)
-      const columnResult = await client.query('SELECT id FROM columns ORDER BY position LIMIT 1');
+      const columnResult = await client.query('SELECT id FROM columns ORDER BY position LIMIT 1')
       if (columnResult.rows.length === 0) {
-        client.release();
+        client.release()
         return res.status(400).json({
           success: false,
           message: 'Aucune colonne trouvée. Veuillez créer les colonnes de base d\'abord.'
-        });
+        })
       }
 
-      const columnId = columnResult.rows[0].id;
+      const columnId = columnResult.rows[0].id
 
       // Obtenir la position suivante pour cette colonne
       const positionResult = await client.query(
         'SELECT COALESCE(MAX(position), 0) + 1 as next_position FROM cards WHERE column_id = $1',
         [columnId]
-      );
-      const nextPosition = positionResult.rows[0].next_position;
+      )
+      const nextPosition = positionResult.rows[0].next_position
 
       // Créer une carte de test
       const insertResult = await client.query(`
@@ -284,25 +283,25 @@ app.post('/api/cards/create-test', async (req, res) => {
         'Ceci est une carte de test pour démontrer la fonctionnalité d\'EpiTrello',
         columnId,
         nextPosition
-      ]);
+      ])
 
-      client.release();
+      client.release()
 
       res.json({
         success: true,
         message: 'Carte de test créée avec succès',
         card: insertResult.rows[0]
-      });
+      })
     } else {
       // Utiliser le stockage en mémoire
       if (inMemoryColumns.length === 0) {
         return res.status(400).json({
           success: false,
           message: 'Aucune colonne trouvée. Veuillez créer les colonnes de base d\'abord.'
-        });
+        })
       }
 
-      const columnId = inMemoryColumns[0].id;
+      const columnId = inMemoryColumns[0].id
 
       const testCard = {
         id: nextCardId++,
@@ -313,86 +312,86 @@ app.post('/api/cards/create-test', async (req, res) => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         column_name: inMemoryColumns[0].name
-      };
+      }
 
-      inMemoryCards.push(testCard);
+      inMemoryCards.push(testCard)
 
       res.json({
         success: true,
         message: 'Carte de test créée avec succès (stockage mémoire)',
         card: testCard
-      });
+      })
     }
   } catch (error) {
-    console.error('Erreur lors de la création de la carte de test:', error);
+    console.error('Erreur lors de la création de la carte de test:', error)
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la création de la carte de test',
       error: error.message
-    });
+    })
   }
-});
+})
 
 // Route pour récupérer toutes les cartes
 app.get('/api/cards', async (req, res) => {
   try {
     if (useDatabase && pool) {
       // Utiliser PostgreSQL
-      const client = await pool.connect();
+      const client = await pool.connect()
       const result = await client.query(`
         SELECT c.*, col.name as column_name 
         FROM cards c 
         LEFT JOIN columns col ON c.column_id = col.id 
         ORDER BY c.position
-      `);
-      client.release();
+      `)
+      client.release()
 
       res.json({
         success: true,
         cards: result.rows
-      });
+      })
     } else {
       // Utiliser le stockage en mémoire
       const cardsWithColumnNames = inMemoryCards.map(card => ({
         ...card,
         column_name: inMemoryColumns.find(col => col.id === card.column_id)?.name || 'Colonne inconnue'
-      }));
+      }))
 
       res.json({
         success: true,
         cards: cardsWithColumnNames
-      });
+      })
     }
   } catch (error) {
-    console.error('Erreur lors de la récupération des cartes:', error);
+    console.error('Erreur lors de la récupération des cartes:', error)
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des cartes',
       error: error.message
-    });
+    })
   }
-});
+})
 
 // Route pour récupérer les cartes d'une colonne spécifique
 app.get('/api/columns/:columnId/cards', async (req, res) => {
   try {
-    const { columnId } = req.params;
-    
+    const { columnId } = req.params
+
     if (useDatabase && pool) {
-      const client = await pool.connect();
+      const client = await pool.connect()
       const result = await client.query(`
         SELECT c.*, col.name as column_name 
         FROM cards c 
         LEFT JOIN columns col ON c.column_id = col.id 
         WHERE c.column_id = $1 
         ORDER BY c.position
-      `, [columnId]);
-      client.release();
+      `, [columnId])
+      client.release()
 
       res.json({
         success: true,
         cards: result.rows
-      });
+      })
     } else {
       // Utiliser le stockage en mémoire
       const columnCards = inMemoryCards
@@ -401,27 +400,27 @@ app.get('/api/columns/:columnId/cards', async (req, res) => {
           ...card,
           column_name: inMemoryColumns.find(col => col.id === card.column_id)?.name || 'Colonne inconnue'
         }))
-        .sort((a, b) => a.position - b.position);
+        .sort((a, b) => a.position - b.position)
 
       res.json({
         success: true,
         cards: columnCards
-      });
+      })
     }
   } catch (error) {
-    console.error('Erreur lors de la récupération des cartes de la colonne:', error);
+    console.error('Erreur lors de la récupération des cartes de la colonne:', error)
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des cartes de la colonne',
       error: error.message
-    });
+    })
   }
-});
+})
 
 app.get('/', (req, res) => {
-  res.send('Bienvenue sur EpiTrello API !');
-});
+  res.send('Bienvenue sur EpiTrello API !')
+})
 
 app.listen(port, () => {
-  console.log(`Serveur backend EpiTrello lancé sur le port ${port}`);
-});
+  console.log(`Serveur backend EpiTrello lancé sur le port ${port}`)
+})
