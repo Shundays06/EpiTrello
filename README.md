@@ -38,6 +38,7 @@ PGPORT=5432
 - `GET /api/columns` : Récupérer toutes les colonnes
 
 ### Cartes
+- `POST /api/cards` : Créer une nouvelle carte personnalisée
 - `POST /api/cards/create-test` : Créer une carte de test
 - `GET /api/cards` : Récupérer toutes les cartes
 - `GET /api/columns/:columnId/cards` : Récupérer les cartes d'une colonne spécifique
@@ -52,6 +53,7 @@ psql -U postgres -d epitrello -f init.sql
 ## Fonctionnalités implémentées
 - ✅ Création des colonnes de base
 - ✅ Affichage d'une carte de test
+- ✅ Formulaire de création de cartes personnalisées
 - ✅ Interface frontend avec colonnes et cartes
 - 🔄 Assignation des utilisateurs (à venir)
 - 🔄 Déplacement des cartes (à venir)
@@ -74,7 +76,12 @@ psql -U postgres -d epitrello -f init.sql
 
 4. **Créer les colonnes de base** : Cliquez sur "Créer colonnes de base"
 
-5. **Créer une carte de test** : Cliquez sur "Créer carte de test"
+5. **Créer une carte personnalisée** :
+   - Cliquez sur "Nouvelle carte"
+   - Remplissez le formulaire (titre obligatoire, colonne obligatoire)
+   - Cliquez sur "Créer la carte"
+
+6. **Créer une carte de test** : Cliquez sur "Créer carte de test"
 
 ## Objectifs
 - Gestion agile (milestones, issues)

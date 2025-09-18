@@ -136,6 +136,81 @@ app.get('/api/columns', async (req, res) => {
   }
 });
 
+// Route pour créer une carte personnalisée
+app.post('/api/cards', async (req, res) => {
+  try {
+    const { title, description, column_id } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le titre de la carte est obligatoire'
+      });
+    }
+
+    if (!column_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'L\'ID de la colonne est obligatoire'
+      });
+    }
+
+    if (useDatabase && pool) {
+      // Utiliser PostgreSQL
+      const client = await pool.connect();
+      
+      const insertResult = await client.query(`
+        INSERT INTO cards (title, description, column_id, position)
+        VALUES ($1, $2, $3, (SELECT COALESCE(MAX(position), 0) + 1 FROM cards WHERE column_id = $3))
+        RETURNING *, (SELECT name FROM columns WHERE id = $3) as column_name
+      `, [title.trim(), description ? description.trim() : null, column_id]);
+
+      client.release();
+
+      res.json({
+        success: true,
+        message: 'Carte créée avec succès',
+        card: insertResult.rows[0]
+      });
+    } else {
+      // Utiliser le stockage en mémoire
+      const column = inMemoryColumns.find(col => col.id === column_id);
+      if (!column) {
+        return res.status(400).json({
+          success: false,
+          message: 'Colonne introuvable'
+        });
+      }
+
+      const card = {
+        id: nextCardId++,
+        title: title.trim(),
+        description: description ? description.trim() : '',
+        column_id: column_id,
+        position: inMemoryCards.filter(c => c.column_id === column_id).length + 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        column_name: column.name
+      };
+
+      inMemoryCards.push(card);
+
+      res.json({
+        success: true,
+        message: 'Carte créée avec succès (stockage mémoire)',
+        card: card
+      });
+    }
+  } catch (error) {
+    console.error('Erreur lors de la création de la carte:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la création de la carte',
+      error: error.message
+    });
+  }
+});
+
 // Route pour créer une carte de test
 app.post('/api/cards/create-test', async (req, res) => {
   try {
