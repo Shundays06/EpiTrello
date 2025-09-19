@@ -1,3 +1,7 @@
+// Import du modèle Card
+const cardModel = require('./models/card')
+// Import du modèle Board
+const boardModel = require('./models/board')
 const express = require('express')
 const dotenv = require('dotenv')
 const cors = require('cors')
@@ -6,6 +10,8 @@ dotenv.config()
 
 const app = express()
 const port = process.env.PORT || 3001
+// Import du modèle User
+const userModel = require('./models/user')
 
 // Configuration CORS
 app.use(cors({
@@ -14,6 +20,163 @@ app.use(cors({
 }))
 
 app.use(express.json())
+// Routes API Cards
+app.post('/api/cards', async (req, res) => {
+  try {
+    const { title, description, board_id, column_id, assigned_user_id } = req.body
+    if (!title || !board_id || !column_id) {
+      return res.status(400).json({ success: false, message: 'Champs requis manquants' })
+    }
+    const card = await cardModel.createCard({ title, description, board_id, column_id, assigned_user_id })
+    res.json({ success: true, card })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.get('/api/cards', async (req, res) => {
+  try {
+    const cards = await cardModel.getCardsByBoard(req.query.board_id)
+    res.json({ success: true, cards })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.get('/api/cards/:id', async (req, res) => {
+  try {
+    const card = await cardModel.getCardById(req.params.id)
+    if (!card) return res.status(404).json({ success: false, message: 'Carte non trouvée' })
+    res.json({ success: true, card })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.put('/api/cards/:id', async (req, res) => {
+  try {
+    const { title, description, column_id, assigned_user_id } = req.body
+    const card = await cardModel.updateCard(req.params.id, { title, description, column_id, assigned_user_id })
+    if (!card) return res.status(404).json({ success: false, message: 'Carte non trouvée' })
+    res.json({ success: true, card })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.delete('/api/cards/:id', async (req, res) => {
+  try {
+    await cardModel.deleteCard(req.params.id)
+    res.json({ success: true, message: 'Carte supprimée' })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+// Routes API Boards
+app.post('/api/boards', async (req, res) => {
+  try {
+    const { name, description } = req.body
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Le nom du board est requis' })
+    }
+    const board = await boardModel.createBoard({ name, description })
+    res.json({ success: true, board })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.get('/api/boards', async (req, res) => {
+  try {
+    const boards = await boardModel.getAllBoards()
+    res.json({ success: true, boards })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.get('/api/boards/:id', async (req, res) => {
+  try {
+    const board = await boardModel.getBoardById(req.params.id)
+    if (!board) return res.status(404).json({ success: false, message: 'Board non trouvé' })
+    res.json({ success: true, board })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.put('/api/boards/:id', async (req, res) => {
+  try {
+    const { name, description } = req.body
+    const board = await boardModel.updateBoard(req.params.id, { name, description })
+    if (!board) return res.status(404).json({ success: false, message: 'Board non trouvé' })
+    res.json({ success: true, board })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.delete('/api/boards/:id', async (req, res) => {
+  try {
+    await boardModel.deleteBoard(req.params.id)
+    res.json({ success: true, message: 'Board supprimé' })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// Routes API Utilisateurs
+app.post('/api/users', async (req, res) => {
+  try {
+    const { username, email, password } = req.body
+    if (!username || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Champs requis manquants' })
+    }
+    const user = await userModel.createUser({ username, email, password })
+    res.json({ success: true, user })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await userModel.getAllUsers()
+    res.json({ success: true, users })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const user = await userModel.getUserById(req.params.id)
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' })
+    res.json({ success: true, user })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { username, email, password } = req.body
+    const user = await userModel.updateUser(req.params.id, { username, email, password })
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' })
+    res.json({ success: true, user })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    await userModel.deleteUser(req.params.id)
+    res.json({ success: true, message: 'Utilisateur supprimé' })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
 
 // Stockage en mémoire pour simuler la base de données
 let inMemoryColumns = []
