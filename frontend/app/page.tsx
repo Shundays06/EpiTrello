@@ -1,5 +1,9 @@
 "use client";
 import { useState, useEffect } from 'react';
+import BoardSelect from '../components/BoardSelect';
+import CreateCardModal from '../components/CreateCardModal';
+import CreateColumnModal from '../components/CreateColumnModal';
+import CreateBoardModal from '../components/CreateBoardModal';
 
 interface Column {
   id: number;
@@ -34,13 +38,10 @@ export default function Page() {
   const [columns, setColumns] = useState<Column[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [showBoardForm, setShowBoardForm] = useState(false);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newBoard, setNewBoard] = useState({ name: '', description: '' });
-  const [newCard, setNewCard] = useState({ title: '', description: '', columnId: 0, assignedUserId: 0 });
+  const [showBoardModal, setShowBoardModal] = useState(false);
+  const [showCardModal, setShowCardModal] = useState(false);
+  const [showColumnModal, setShowColumnModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showColumnForm, setShowColumnForm] = useState(false);
-  const [newColumn, setNewColumn] = useState({ name: '', position: 1 });
 
   // Fetch boards
   const fetchBoards = async () => {
@@ -75,12 +76,18 @@ export default function Page() {
   const fetchCards = async () => {
     if (!selectedBoardId) return;
     try {
+      console.log('Fetching cards for board:', selectedBoardId);
       const response = await fetch(`http://localhost:3001/api/boards/${selectedBoardId}/cards`);
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
       if (data.success) {
         setCards(data.cards);
+      } else {
+        setError(`Erreur API: ${data.message}`);
       }
     } catch (err) {
+      console.error('Error fetching cards:', err);
       setError('Erreur lors du chargement des cartes');
     }
   };
@@ -144,43 +151,92 @@ export default function Page() {
   };
 
   // Create custom card
-  const createCustomCard = async () => {
-    if (!newCard.title.trim()) {
-      setError('Le titre de la carte est obligatoire');
-      return;
-    }
-    if (newCard.columnId === 0) {
-      setError('Veuillez sélectionner une colonne');
-      return;
-    }
-    if (newCard.assignedUserId === 0) {
-      setError('Veuillez sélectionner un utilisateur');
-      return;
-    }
+  const handleCreateCard = async (cardData: {
+    title: string;
+    description: string;
+    column_id: number;
+    assigned_user_id: number;
+  }) => {
     try {
       setError(null);
       const response = await fetch('http://localhost:3001/api/cards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: newCard.title.trim(),
-          description: newCard.description.trim(),
-          column_id: newCard.columnId,
+          title: cardData.title.trim(),
+          description: cardData.description.trim(),
+          column_id: cardData.column_id,
           board_id: selectedBoardId,
-          assigned_user_id: newCard.assignedUserId
+          assigned_user_id: cardData.assigned_user_id
         })
       });
       const data = await response.json();
       if (data.success) {
         await fetchCards();
-        setNewCard({ title: '', description: '', columnId: 0, assignedUserId: 0 });
-        setShowCreateForm(false);
         setError(null);
       } else {
-        setError(data.message);
+        throw new Error(data.message);
       }
     } catch (err) {
-      setError(`Erreur lors de la création de la carte: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
+      throw new Error(`Erreur lors de la création de la carte: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
+    }
+  };
+
+  // Create column
+  const handleCreateColumn = async (columnData: {
+    name: string;
+    position: number;
+  }) => {
+    try {
+      setError(null);
+      const response = await fetch('http://localhost:3001/api/columns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: columnData.name.trim(),
+          position: columnData.position,
+          board_id: selectedBoardId ?? 1
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        await fetchColumns();
+        setError(null);
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      throw new Error(`Erreur lors de la création de la colonne: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
+    }
+  };
+
+  // Create board
+  const handleCreateBoard = async (boardData: {
+    name: string;
+    description: string;
+  }) => {
+    try {
+      setError(null);
+      const response = await fetch('http://localhost:3001/api/boards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: boardData.name.trim(), 
+          description: boardData.description.trim() 
+        })
+      });
+      if (!response.ok) {
+        throw new Error('Erreur lors de la création du board');
+      }
+      const data = await response.json();
+      if (data.success) {
+        await fetchBoards();
+        setError(null);
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      throw new Error(`Erreur lors de la création du board: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
     }
   };
 
@@ -218,27 +274,22 @@ export default function Page() {
           <div className="flex justify-between items-center py-4">
             <h1 className="text-2xl font-bold text-gray-900">EpiTrello</h1>
             <div className="flex gap-2 items-center">
-              <select
-                value={selectedBoardId ?? 0}
-                onChange={e => setSelectedBoardId(parseInt(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium"
-              >
-                {boards.length === 0 && <option value={0}>Aucun board</option>}
-                {boards.map(board => (
-                  <option key={board.id} value={board.id}>{board.name}</option>
-                ))}
-              </select>
+              <BoardSelect
+                boards={boards}
+                selectedBoardId={selectedBoardId}
+                onBoardChange={setSelectedBoardId}
+              />
               <button
-                onClick={() => setShowBoardForm(!showBoardForm)}
+                onClick={() => setShowBoardModal(true)}
                 className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
-                {showBoardForm ? 'Annuler' : 'Nouveau board'}
+                Nouveau board
               </button>
               <button
-                onClick={() => setShowColumnForm(!showColumnForm)}
+                onClick={() => setShowColumnModal(true)}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
-                {showColumnForm ? 'Annuler' : 'Créer une colonne'}
+                Créer une colonne
               </button>
               <button
                 onClick={createTestCard}
@@ -247,233 +298,48 @@ export default function Page() {
                 Créer carte de test
               </button>
               <button
-                onClick={() => setShowCreateForm(!showCreateForm)}
+                onClick={() => setShowCardModal(true)}
                 className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
-                {showCreateForm ? 'Annuler' : 'Nouvelle carte'}
+                Nouvelle carte
               </button>
-      {/* Formulaire de création de colonne */}
-      {showColumnForm && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Créer une nouvelle colonne</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nom *</label>
-                <input
-                  type="text"
-                  value={newColumn.name}
-                  onChange={e => setNewColumn({ ...newColumn, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Nom de la colonne"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Position</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={newColumn.position}
-                  onChange={e => setNewColumn({ ...newColumn, position: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Position dans le board"
-                />
-              </div>
-            </div>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={async () => {
-                  if (!newColumn.name.trim()) {
-                    setError('Le nom de la colonne est obligatoire');
-                    return;
-                  }
-                  setError(null);
-                  const response = await fetch('http://localhost:3001/api/columns', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      name: newColumn.name.trim(),
-                      position: newColumn.position,
-                      board_id: selectedBoardId ?? 1
-                    })
-                  });
-                  const data = await response.json();
-                  if (data.success) {
-                    await fetchColumns();
-                    setShowColumnForm(false);
-                    setNewColumn({ name: '', position: 1 });
-                    setError(null);
-                  } else {
-                    setError(data.message);
-                  }
-                }}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md font-medium"
-              >
-                Créer la colonne
-              </button>
-              <button
-                onClick={() => {
-                  setShowColumnForm(false);
-                  setNewColumn({ name: '', position: 1 });
-                  setError(null);
-                }}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md font-medium"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Formulaire de création de board */}
-      {showBoardForm && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Créer un nouveau board</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nom *</label>
-                <input
-                  type="text"
-                  value={newBoard.name}
-                  onChange={e => setNewBoard({ ...newBoard, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  placeholder="Nom du board"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <input
-                  type="text"
-                  value={newBoard.description}
-                  onChange={e => setNewBoard({ ...newBoard, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  placeholder="Description du board (optionnel)"
-                />
-              </div>
-            </div>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={async () => {
-                  if (!newBoard.name.trim()) {
-                    setError('Le nom du board est obligatoire');
-                    return;
-                  }
-                  setError(null);
-                  const response = await fetch('http://localhost:3001/api/boards', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: newBoard.name.trim(), description: newBoard.description.trim() })
-                  });
-                  if (!response.ok) {
-                    setError('Erreur lors de la création du board');
-                    return;
-                  }
-                  const data = await response.json();
-                  if (data.success) {
-                    await fetchBoards();
-                    setShowBoardForm(false);
-                    setNewBoard({ name: '', description: '' });
-                    setError(null);
-                  } else {
-                    setError(data.message);
-                  }
-                }}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-md font-medium"
-              >
-                Créer le board
-              </button>
-              <button
-                onClick={() => {
-                  setShowBoardForm(false);
-                  setNewBoard({ name: '', description: '' });
-                  setError(null);
-                }}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md font-medium"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modals */}
+      <CreateBoardModal
+        isOpen={showBoardModal}
+        onClose={() => setShowBoardModal(false)}
+        onCreateBoard={handleCreateBoard}
+      />
 
-      {/* Formulaire de création de carte */}
-      {showCreateForm && (
+      <CreateColumnModal
+        isOpen={showColumnModal}
+        onClose={() => setShowColumnModal(false)}
+        onCreateColumn={handleCreateColumn}
+      />
+
+      <CreateCardModal
+        isOpen={showCardModal}
+        onClose={() => setShowCardModal(false)}
+        columns={columns}
+        users={users}
+        onCreateCard={handleCreateCard}
+      />
+
+      {/* Error display */}
+      {error && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Créer une nouvelle carte</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Titre *</label>
-                <input
-                  type="text"
-                  value={newCard.title}
-                  onChange={(e) => setNewCard({...newCard, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Entrez le titre de la carte"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Colonne *</label>
-                <select
-                  value={newCard.columnId}
-                  onChange={(e) => setNewCard({...newCard, columnId: parseInt(e.target.value)})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value={0}>Sélectionnez une colonne</option>
-                  {columns.map((column) => (
-                    <option key={column.id} value={column.id}>{column.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Utilisateur assigné *</label>
-                <select
-                  value={newCard.assignedUserId}
-                  onChange={(e) => setNewCard({...newCard, assignedUserId: parseInt(e.target.value)})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value={0}>Sélectionnez un utilisateur</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>{user.username}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-              <textarea
-                value={newCard.description}
-                onChange={(e) => setNewCard({...newCard, description: e.target.value})}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Entrez la description de la carte (optionnel)"
-              />
-            </div>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={createCustomCard}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md font-medium"
-              >
-                Créer la carte
-              </button>
-              <button
-                onClick={() => {
-                  setShowCreateForm(false);
-                  setNewCard({ title: '', description: '', columnId: 0, assignedUserId: 0 });
-                  setError(null);
-                }}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md font-medium"
-              >
-                Annuler
-              </button>
-            </div>
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            {error}
+            <button
+              onClick={() => setError(null)}
+              className="float-right text-red-500 hover:text-red-700"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}
@@ -488,6 +354,12 @@ export default function Page() {
             <p className="text-gray-600 mb-6">
               Cliquez sur &quot;Créer colonnes de base&quot; pour commencer.
             </p>
+            <button
+              onClick={createDefaultColumns}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-md text-sm font-medium"
+            >
+              Créer colonnes de base
+            </button>
           </div>
         ) : (
           <div className="flex gap-6 overflow-x-auto pb-4">

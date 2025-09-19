@@ -123,6 +123,17 @@ app.get('/api/cards', async (req, res) => {
   }
 })
 
+// Route pour récupérer les cartes d'un board spécifique
+app.get('/api/boards/:boardId/cards', async (req, res) => {
+  try {
+    const { boardId } = req.params
+    const cards = await cardModel.getCardsByBoard(boardId)
+    res.json({ success: true, cards })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
 app.get('/api/cards/:id', async (req, res) => {
   try {
     const card = await cardModel.getCardById(req.params.id)
