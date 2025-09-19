@@ -39,6 +39,8 @@ export default function Page() {
   const [newBoard, setNewBoard] = useState({ name: '', description: '' });
   const [newCard, setNewCard] = useState({ title: '', description: '', columnId: 0, assignedUserId: 0 });
   const [error, setError] = useState<string | null>(null);
+  const [showColumnForm, setShowColumnForm] = useState(false);
+  const [newColumn, setNewColumn] = useState({ name: '', position: 1 });
 
   // Fetch boards
   const fetchBoards = async () => {
@@ -233,10 +235,10 @@ export default function Page() {
                 {showBoardForm ? 'Annuler' : 'Nouveau board'}
               </button>
               <button
-                onClick={createDefaultColumns}
+                onClick={() => setShowColumnForm(!showColumnForm)}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
-                Créer colonnes de base
+                {showColumnForm ? 'Annuler' : 'Créer une colonne'}
               </button>
               <button
                 onClick={createTestCard}
@@ -250,6 +252,79 @@ export default function Page() {
               >
                 {showCreateForm ? 'Annuler' : 'Nouvelle carte'}
               </button>
+      {/* Formulaire de création de colonne */}
+      {showColumnForm && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Créer une nouvelle colonne</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nom *</label>
+                <input
+                  type="text"
+                  value={newColumn.name}
+                  onChange={e => setNewColumn({ ...newColumn, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nom de la colonne"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Position</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={newColumn.position}
+                  onChange={e => setNewColumn({ ...newColumn, position: parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Position dans le board"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={async () => {
+                  if (!newColumn.name.trim()) {
+                    setError('Le nom de la colonne est obligatoire');
+                    return;
+                  }
+                  setError(null);
+                  const response = await fetch('http://localhost:3001/api/columns', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      name: newColumn.name.trim(),
+                      position: newColumn.position,
+                      board_id: selectedBoardId ?? 1
+                    })
+                  });
+                  const data = await response.json();
+                  if (data.success) {
+                    await fetchColumns();
+                    setShowColumnForm(false);
+                    setNewColumn({ name: '', position: 1 });
+                    setError(null);
+                  } else {
+                    setError(data.message);
+                  }
+                }}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md font-medium"
+              >
+                Créer la colonne
+              </button>
+              <button
+                onClick={() => {
+                  setShowColumnForm(false);
+                  setNewColumn({ name: '', position: 1 });
+                  setError(null);
+                }}
+                className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md font-medium"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
             </div>
           </div>
         </div>

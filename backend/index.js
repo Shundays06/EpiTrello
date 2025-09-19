@@ -1,15 +1,95 @@
+
+const express = require('express');
+const app = express();
+const dotenv = require('dotenv');
+const cors = require('cors');
+dotenv.config();
+const port = process.env.PORT || 3001;
+
+// ...autres initialisations...
+
+// Initialiser le board par défaut au démarrage
+async function ensureDefaultBoard() {
+  if (useDatabase && pool) {
+    const client = await pool.connect();
+    const result = await client.query('SELECT COUNT(*) FROM boards');
+    if (parseInt(result.rows[0].count) === 0) {
+      await client.query(
+        'INSERT INTO boards (name, description) VALUES ($1, $2)',
+        ['Board principal', 'Board créé automatiquement']
+      );
+    }
+    client.release();
+  }
+}
+
+// Initialiser les colonnes de base au démarrage
+async function ensureDefaultColumns() {
+  if (useDatabase && pool) {
+    const client = await pool.connect();
+    const result = await client.query('SELECT COUNT(*) FROM columns');
+    if (parseInt(result.rows[0].count) === 0) {
+      const defaultBoardId = 1;
+      for (const col of defaultColumns) {
+        await client.query(
+          'INSERT INTO columns (name, position, board_id) VALUES ($1, $2, $3)',
+          [col.name, col.position, defaultBoardId]
+        );
+      }
+    }
+    client.release();
+  } else {
+    if (inMemoryColumns.length === 0) {
+      inMemoryColumns = defaultColumns.map(col => ({
+        id: nextColumnId++,
+        name: col.name,
+        position: col.position,
+        board_id: 1,
+        created_at: new Date().toISOString()
+      }));
+    }
+  }
+}
+
+// ...déclaration des variables, pool, etc...
+// Appel APRÈS l'initialisation des variables
+// Route pour créer une colonne personnalisée
+app.post('/api/columns', async (req, res) => {
+  try {
+    const { name, position, board_id } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Le nom de la colonne est obligatoire' });
+    }
+    const pos = position ? parseInt(position) : 1;
+    const boardId = board_id ? parseInt(board_id) : 1;
+    if (useDatabase && pool) {
+      const client = await pool.connect();
+      const result = await client.query(
+        'INSERT INTO columns (name, position, board_id) VALUES ($1, $2, $3) RETURNING *',
+        [name.trim(), pos, boardId]
+      );
+      client.release();
+      res.json({ success: true, column: result.rows[0] });
+    } else {
+      const newCol = {
+        id: nextColumnId++,
+        name: name.trim(),
+        position: pos,
+        board_id: boardId,
+        created_at: new Date().toISOString()
+      };
+      inMemoryColumns.push(newCol);
+      res.json({ success: true, column: newCol });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 // Import du modèle Card
 const cardModel = require('./models/card')
 // Import du modèle Board
 const boardModel = require('./models/board')
-const express = require('express')
-const dotenv = require('dotenv')
-const cors = require('cors')
-
 dotenv.config()
-
-const app = express()
-const port = process.env.PORT || 3001
 // Import du modèle User
 const userModel = require('./models/user')
 
