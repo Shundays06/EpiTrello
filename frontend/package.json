@@ -11,6 +11,9 @@
     "test": "echo \"Tests frontend à implémenter\" && exit 0"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@types/react-select": "^5.0.1",
     "next": "15.5.3",
     "react": "19.1.0",

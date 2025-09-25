@@ -37,10 +37,20 @@ async function deleteCard(id) {
   return true
 }
 
+// Déplacer une carte vers une nouvelle colonne/position
+async function moveCard(id, { column_id, position }) {
+  const result = await pool.query(
+    'UPDATE cards SET column_id = $1, position = COALESCE($2, position) WHERE id = $3 RETURNING *',
+    [column_id, position, id]
+  )
+  return result.rows[0]
+}
+
 module.exports = {
   createCard,
   getCardById,
   getCardsByBoard,
   updateCard,
   deleteCard,
+  moveCard,
 }

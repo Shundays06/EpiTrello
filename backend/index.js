@@ -163,6 +163,26 @@ app.delete('/api/cards/:id', async (req, res) => {
     res.status(500).json({ success: false, message: error.message })
   }
 })
+
+// Route pour déplacer une carte
+app.patch('/api/cards/:id/move', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { column_id, position } = req.body
+    
+    if (!column_id) {
+      return res.status(400).json({ success: false, message: 'column_id est requis' })
+    }
+
+    const card = await cardModel.moveCard(id, { column_id, position })
+    if (!card) return res.status(404).json({ success: false, message: 'Carte non trouvée' })
+    
+    res.json({ success: true, card })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
 // Routes API Boards
 app.post('/api/boards', async (req, res) => {
   try {
@@ -266,6 +286,46 @@ app.delete('/api/users/:id', async (req, res) => {
     res.json({ success: true, message: 'Utilisateur supprimé' })
   } catch (error) {
     res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// Route pour créer des utilisateurs par défaut
+app.post('/api/users/create-default', async (req, res) => {
+  try {
+    const defaultUsers = [
+      { username: 'Admin', email: 'admin@epitrello.com', password: 'password123' },
+      { username: 'Dev1', email: 'dev1@epitrello.com', password: 'password123' },
+      { username: 'Dev2', email: 'dev2@epitrello.com', password: 'password123' },
+      { username: 'Designer', email: 'designer@epitrello.com', password: 'password123' },
+      { username: 'PM', email: 'pm@epitrello.com', password: 'password123' }
+    ];
+
+    const existingUsers = await userModel.getAllUsers();
+    
+    if (existingUsers.length === 0) {
+      const createdUsers = [];
+      for (const userData of defaultUsers) {
+        try {
+          const user = await userModel.createUser(userData);
+          createdUsers.push(user);
+        } catch (error) {
+          console.log(`Utilisateur ${userData.username} existe déjà ou erreur:`, error.message);
+        }
+      }
+      res.json({ 
+        success: true, 
+        message: `${createdUsers.length} utilisateurs par défaut créés`, 
+        users: createdUsers 
+      });
+    } else {
+      res.json({ 
+        success: true, 
+        message: 'Des utilisateurs existent déjà', 
+        users: existingUsers 
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 })
 

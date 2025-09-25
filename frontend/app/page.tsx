@@ -4,6 +4,8 @@ import BoardSelect from '../components/BoardSelect';
 import CreateCardModal from '../components/CreateCardModal';
 import CreateColumnModal from '../components/CreateColumnModal';
 import CreateBoardModal from '../components/CreateBoardModal';
+import KanbanBoard from '../components/KanbanBoard';
+import EditCardModal from '../components/EditCardModal';
 
 interface Column {
   id: number;
@@ -41,6 +43,8 @@ export default function Page() {
   const [showBoardModal, setShowBoardModal] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
   const [showColumnModal, setShowColumnModal] = useState(false);
+  const [showEditCardModal, setShowEditCardModal] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch boards
@@ -127,6 +131,26 @@ export default function Page() {
       }
     } catch (err) {
       setError(`Erreur lors de la création des colonnes: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
+    }
+  };
+
+  // Create default users
+  const createDefaultUsers = async () => {
+    try {
+      setError(null);
+      const response = await fetch('http://localhost:3001/api/users/create-default', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      if (data.success) {
+        await fetchUsers();
+        setError(null);
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError(`Erreur lors de la création des utilisateurs: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
     }
   };
 
@@ -240,11 +264,93 @@ export default function Page() {
     }
   };
 
-  // Initial load
+  // Move card function for drag & drop
+  const handleCardMove = async (cardId: number, newColumnId: number, newPosition: number) => {
+    try {
+      setError(null);
+      const response = await fetch(`http://localhost:3001/api/cards/${cardId}/move`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          column_id: newColumnId,
+          position: newPosition
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        await fetchCards(); // Refresh cards after move
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      setError(`Erreur lors du déplacement de la carte: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
+      // Refresh cards to revert UI changes
+      await fetchCards();
+    }
+  };
+
+  // Handle card click for editing
+  const handleCardClick = (card: Card) => {
+    setSelectedCard(card);
+    setShowEditCardModal(true);
+  };
+
+  // Update card function
+  const handleUpdateCard = async (cardId: number, cardData: {
+    title: string;
+    description: string;
+    column_id: number;
+    assigned_user_id: number;
+  }) => {
+    try {
+      setError(null);
+      const response = await fetch(`http://localhost:3001/api/cards/${cardId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cardData)
+      });
+      const data = await response.json();
+      if (data.success) {
+        await fetchCards();
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      throw new Error(`Erreur lors de la mise à jour de la carte: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
+    }
+  };
+
+  // Delete card function
+  const handleDeleteCard = async (cardId: number) => {
+    try {
+      setError(null);
+      const response = await fetch(`http://localhost:3001/api/cards/${cardId}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+      if (data.success) {
+        await fetchCards();
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      throw new Error(`Erreur lors de la suppression de la carte: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
+    }
+  };
+
+  // Initial load with auto-initialization
   useEffect(() => {
     const loadBoardsAndUsers = async () => {
       setLoading(true);
       await Promise.all([fetchBoards(), fetchUsers()]);
+      
+      // Auto-create default users if none exist
+      const usersResponse = await fetch('http://localhost:3001/api/users');
+      const usersData = await usersResponse.json();
+      if (usersData.success && usersData.users.length === 0) {
+        await createDefaultUsers();
+      }
+      
       setLoading(false);
     };
     loadBoardsAndUsers();
@@ -329,6 +435,19 @@ export default function Page() {
         onCreateCard={handleCreateCard}
       />
 
+      <EditCardModal
+        isOpen={showEditCardModal}
+        onClose={() => {
+          setShowEditCardModal(false);
+          setSelectedCard(null);
+        }}
+        card={selectedCard}
+        columns={columns}
+        users={users}
+        onUpdateCard={handleUpdateCard}
+        onDeleteCard={handleDeleteCard}
+      />
+
       {/* Error display */}
       {error && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -362,46 +481,13 @@ export default function Page() {
             </button>
           </div>
         ) : (
-          <div className="flex gap-6 overflow-x-auto pb-4">
-            {columns.map((column) => (
-              <div
-                key={column.id}
-                className="bg-gray-200 rounded-lg p-4 min-w-[300px] max-w-[300px]"
-              >
-                <h3 className="font-semibold text-gray-800 mb-4">
-                  {column.name}
-                </h3>
-                <div className="space-y-3">
-                  {getCardsForColumn(column.id).map((card: Card) => (
-                    <div
-                      key={card.id}
-                      className="bg-white rounded shadow-sm p-3 hover:shadow-md transition-shadow"
-                    >
-                      <h4 className="font-medium text-gray-900 mb-2">
-                        {card.title}
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        {card.description}
-                      </p>
-                      <div className="mt-2 text-xs text-gray-400">
-                        Créée le {new Date(card.created_at).toLocaleDateString('fr-FR')}
-                      </div>
-                      {card.assigned_user_id && (
-                        <div className="mt-1 text-xs text-green-700">
-                          Assignée à : {users.find((u: any) => u.id === card.assigned_user_id)?.username || 'Utilisateur inconnu'}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {getCardsForColumn(column.id).length === 0 && (
-                    <div className="text-gray-500 text-sm italic py-4 text-center">
-                      Aucune carte dans cette colonne
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <KanbanBoard
+            columns={columns}
+            cards={cards}
+            users={users}
+            onCardMove={handleCardMove}
+            onCardClick={handleCardClick}
+          />
         )}
       </main>
     </div>

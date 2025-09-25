@@ -13,6 +13,7 @@ CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(255) UNIQUE NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -45,7 +46,7 @@ CREATE TABLE cards (
   column_id INTEGER REFERENCES columns(id) ON DELETE CASCADE,
   board_id INTEGER REFERENCES boards(id) ON DELETE CASCADE,
   position INTEGER NOT NULL DEFAULT 1,
-  assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  assigned_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -61,9 +62,9 @@ CREATE TABLE card_assignments (
 
 -- Insérer des données de test
 -- Utilisateur par défaut
-INSERT INTO users (username, email) VALUES 
-  ('admin', 'admin@epitrello.com'),
-  ('user1', 'user1@epitrello.com');
+INSERT INTO users (username, email, password) VALUES 
+  ('admin', 'admin@epitrello.com', 'password123'),
+  ('user1', 'user1@epitrello.com', 'password123');
 
 -- Board par défaut
 INSERT INTO boards (name, description, owner_id) VALUES 
