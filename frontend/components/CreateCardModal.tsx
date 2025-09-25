@@ -113,6 +113,22 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       ...provided,
       backgroundColor: state.isSelected ? '#3B82F6' : state.isFocused ? '#EBF4FF' : 'white',
       color: state.isSelected ? 'white' : '#374151'
+    }),
+    menu: (provided: any) => ({
+      ...provided,
+      zIndex: 10000,
+      maxHeight: '200px',
+      overflowY: 'auto',
+      position: 'absolute'
+    }),
+    menuList: (provided: any) => ({
+      ...provided,
+      maxHeight: '200px',
+      overflowY: 'auto'
+    }),
+    menuPortal: (provided: any) => ({
+      ...provided,
+      zIndex: 10000
     })
   };
 
@@ -167,6 +183,10 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
             styles={customSelectStyles}
             isDisabled={isLoading}
             isClearable={false}
+            isSearchable={true}
+            maxMenuHeight={200}
+            menuPlacement="bottom"
+            menuShouldScrollIntoView={false}
           />
         </div>
 
@@ -184,6 +204,12 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
             styles={customSelectStyles}
             isDisabled={isLoading}
             isClearable={false}
+            isSearchable={true}
+            maxMenuHeight={200}
+            menuPlacement="bottom"
+            menuShouldScrollIntoView={false}
+            menuPortalTarget={document.body}
+            menuPosition="fixed"
           />
         </div>
 

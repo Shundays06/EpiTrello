@@ -154,26 +154,6 @@ export default function Page() {
     }
   };
 
-  // Create test card
-  const createTestCard = async () => {
-    try {
-      setError(null);
-      const response = await fetch('http://localhost:3001/api/cards/create-test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await response.json();
-      if (data.success) {
-        await fetchCards();
-        setError(null);
-      } else {
-        setError(data.message);
-      }
-    } catch (err) {
-      setError(`Erreur lors de la création de la carte de test: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
-    }
-  };
-
   // Create custom card
   const handleCreateCard = async (cardData: {
     title: string;
@@ -396,12 +376,6 @@ export default function Page() {
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
                 Créer une colonne
-              </button>
-              <button
-                onClick={createTestCard}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Créer carte de test
               </button>
               <button
                 onClick={() => setShowCardModal(true)}
