@@ -8,6 +8,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -127,9 +128,18 @@ function DroppableColumn({
   onCardClick?: (card: Card) => void;
 }) {
   const columnCards = cards.filter(card => card.column_id === column.id);
+  
+  const { setNodeRef, isOver } = useDroppable({
+    id: `column-${column.id}`,
+  });
 
   return (
-    <div className="bg-gray-50 rounded-lg p-4 min-w-[300px] max-w-[300px] border-2 border-gray-200">
+    <div 
+      ref={setNodeRef}
+      className={`bg-gray-50 rounded-lg p-4 min-w-[300px] max-w-[300px] border-2 transition-colors ${
+        isOver ? 'border-blue-400 bg-blue-50' : 'border-gray-200'
+      }`}
+    >
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-semibold text-gray-800">
           {column.name}
@@ -139,17 +149,21 @@ function DroppableColumn({
         </span>
       </div>
       <SortableContext items={columnCards.map(card => card.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-3 min-h-[200px]">
+        <div className={`space-y-3 min-h-[200px] transition-all ${isOver ? 'bg-blue-25 rounded-lg p-2' : ''}`}>
           {columnCards.map((card) => (
             <DraggableCard key={card.id} card={card} users={users} onCardClick={onCardClick} />
           ))}
           {columnCards.length === 0 && (
-            <div className="text-gray-500 text-sm italic py-8 text-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-25">
+            <div className={`text-gray-500 text-sm italic py-12 text-center border-2 border-dashed rounded-lg transition-all ${
+              isOver 
+                ? 'border-blue-400 bg-blue-100 text-blue-600' 
+                : 'border-gray-300 bg-gray-25'
+            }`}>
               <div className="flex flex-col items-center">
-                <svg className="h-8 w-8 mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className={`h-8 w-8 mb-2 ${isOver ? 'text-blue-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
-                Glissez une carte ici
+                {isOver ? 'Déposez la carte ici' : 'Glissez une carte ici'}
               </div>
             </div>
           )}
@@ -183,6 +197,16 @@ export default function KanbanBoard({ columns, cards, users, onCardMove, onCardC
     const activeCard = cards.find(c => c.id === active.id);
     if (!activeCard) return;
 
+    // Vérifier si on survole une colonne directement
+    if (over.id.toString().startsWith('column-')) {
+      const columnId = parseInt(over.id.toString().replace('column-', ''));
+      if (columnId !== activeCard.column_id) {
+        // Déplacer vers une nouvelle colonne vide
+        onCardMove(activeCard.id, columnId, 0);
+      }
+      return;
+    }
+
     // Si on drag sur une autre carte, on trouve la colonne de cette carte
     const overCard = cards.find(c => c.id === over.id);
     if (overCard && overCard.column_id !== activeCard.column_id) {
@@ -198,10 +222,20 @@ export default function KanbanBoard({ columns, cards, users, onCardMove, onCardC
     if (!over) return;
 
     const activeCard = cards.find(c => c.id === active.id);
-    const overCard = cards.find(c => c.id === over.id);
-
     if (!activeCard) return;
 
+    // Vérifier si on a droppé sur une colonne directement
+    if (over.id.toString().startsWith('column-')) {
+      const columnId = parseInt(over.id.toString().replace('column-', ''));
+      if (columnId !== activeCard.column_id) {
+        // Déplacer vers une colonne (potentiellement vide)
+        onCardMove(activeCard.id, columnId, 0);
+      }
+      return;
+    }
+
+    // Gestion du drop sur une autre carte
+    const overCard = cards.find(c => c.id === over.id);
     if (overCard && activeCard.id !== overCard.id) {
       const activeIndex = cards.findIndex(c => c.id === activeCard.id);
       const overIndex = cards.findIndex(c => c.id === overCard.id);
@@ -210,6 +244,9 @@ export default function KanbanBoard({ columns, cards, users, onCardMove, onCardC
         // Réorganiser dans la même colonne
         const newPosition = overIndex;
         onCardMove(activeCard.id, activeCard.column_id, newPosition);
+      } else {
+        // Déplacer vers une nouvelle colonne à la position de la carte survolée
+        onCardMove(activeCard.id, overCard.column_id, overIndex);
       }
     }
   };
