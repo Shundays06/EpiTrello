@@ -528,6 +528,74 @@ app.get('/api/columns', async (req, res) => {
   }
 })
 
+// Route pour supprimer une colonne
+app.delete('/api/columns/:id', async (req, res) => {
+  try {
+    const columnId = parseInt(req.params.id);
+    
+    if (useDatabase && pool) {
+      const client = await pool.connect();
+      
+      // Vérifier si la colonne existe
+      const columnCheck = await client.query('SELECT * FROM columns WHERE id = $1', [columnId]);
+      if (columnCheck.rows.length === 0) {
+        client.release();
+        return res.status(404).json({
+          success: false,
+          message: 'Colonne non trouvée'
+        });
+      }
+      
+      // Supprimer toutes les cartes de cette colonne d'abord
+      await client.query('DELETE FROM cards WHERE column_id = $1', [columnId]);
+      
+      // Supprimer la colonne
+      await client.query('DELETE FROM columns WHERE id = $1', [columnId]);
+      
+      client.release();
+      
+      res.json({
+        success: true,
+        message: 'Colonne supprimée avec succès'
+      });
+    } else {
+      // Utiliser le stockage en mémoire
+      const columnIndex = inMemoryColumns.findIndex(col => col.id === columnId);
+      
+      if (columnIndex === -1) {
+        return res.status(404).json({
+          success: false,
+          message: 'Colonne non trouvée'
+        });
+      }
+      
+      // Supprimer les cartes de cette colonne d'abord
+      const cardsToRemove = inMemoryCards.filter(card => card.column_id === columnId);
+      cardsToRemove.forEach(card => {
+        const cardIndex = inMemoryCards.findIndex(c => c.id === card.id);
+        if (cardIndex > -1) {
+          inMemoryCards.splice(cardIndex, 1);
+        }
+      });
+      
+      // Supprimer la colonne
+      inMemoryColumns.splice(columnIndex, 1);
+      
+      res.json({
+        success: true,
+        message: 'Colonne supprimée avec succès'
+      });
+    }
+  } catch (error) {
+    console.error('Erreur lors de la suppression de la colonne:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la suppression de la colonne',
+      error: error.message
+    });
+  }
+});
+
 // Route pour créer une carte personnalisée
 app.post('/api/cards', async (req, res) => {
   try {

@@ -46,6 +46,7 @@ interface KanbanBoardProps {
   users: User[];
   onCardMove: (cardId: number, newColumnId: number, newPosition: number) => void;
   onCardClick?: (card: Card) => void;
+  onColumnDelete?: (columnId: number) => void;
 }
 
 // Composant pour une carte draggable
@@ -120,12 +121,14 @@ function DroppableColumn({
   column, 
   cards, 
   users,
-  onCardClick
+  onCardClick,
+  onColumnDelete
 }: { 
   column: Column; 
   cards: Card[]; 
   users: User[];
   onCardClick?: (card: Card) => void;
+  onColumnDelete?: (columnId: number) => void;
 }) {
   const columnCards = cards.filter(card => card.column_id === column.id);
   
@@ -144,9 +147,26 @@ function DroppableColumn({
         <h3 className="font-semibold text-gray-800">
           {column.name}
         </h3>
-        <span className="bg-gray-200 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
-          {columnCards.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="bg-gray-200 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
+            {columnCards.length}
+          </span>
+          {onColumnDelete && (
+            <button
+              onClick={() => {
+                if (confirm(`Êtes-vous sûr de vouloir supprimer la colonne "${column.name}" ? Toutes les cartes seront supprimées.`)) {
+                  onColumnDelete(column.id);
+                }
+              }}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+              title="Supprimer la colonne"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
       <SortableContext items={columnCards.map(card => card.id)} strategy={verticalListSortingStrategy}>
         <div className={`space-y-3 min-h-[200px] transition-all ${isOver ? 'bg-blue-25 rounded-lg p-2' : ''}`}>
@@ -174,7 +194,7 @@ function DroppableColumn({
 }
 
 // Composant principal KanbanBoard
-export default function KanbanBoard({ columns, cards, users, onCardMove, onCardClick }: KanbanBoardProps) {
+export default function KanbanBoard({ columns, cards, users, onCardMove, onCardClick, onColumnDelete }: KanbanBoardProps) {
   const [activeCard, setActiveCard] = React.useState<Card | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -266,6 +286,7 @@ export default function KanbanBoard({ columns, cards, users, onCardMove, onCardC
             cards={cards}
             users={users}
             onCardClick={onCardClick}
+            onColumnDelete={onColumnDelete}
           />
         ))}
       </div>

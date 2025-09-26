@@ -350,6 +350,25 @@ export default function Page() {
     }
   };
 
+  const handleDeleteColumn = async (columnId: number) => {
+    try {
+      setError(null);
+      const response = await fetch(`http://localhost:3001/api/columns/${columnId}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+      if (data.success) {
+        // Rafraîchir les colonnes et cartes
+        await fetchColumns();
+        await fetchCards();
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      setError(`Erreur lors de la suppression de la colonne: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
+    }
+  };
+
   // Initial load with auto-initialization
   useEffect(() => {
     const loadBoardsAndUsers = async () => {
@@ -504,6 +523,7 @@ export default function Page() {
             users={users}
             onCardMove={handleCardMove}
             onCardClick={handleCardClick}
+            onColumnDelete={handleDeleteColumn}
           />
         )}
       </main>
