@@ -6,7 +6,74 @@ const cors = require('cors');
 dotenv.config();
 const port = process.env.PORT || 3001;
 
-// ...autres initialisations...
+// Import des modèles
+const cardModel = require('./models/card')
+const boardModel = require('./models/board')
+const userModel = require('./models/user')
+
+// Configuration des middlewares
+app.use(cors({
+  origin: 'http://localhost:3000', // URL du frontend Next.js
+  credentials: true
+}))
+
+app.use(express.json())
+
+// Stockage en mémoire pour simuler la base de données
+let inMemoryColumns = []
+const inMemoryCards = []
+let nextColumnId = 1
+let nextCardId = 1
+
+// Modèle de colonnes de base
+const defaultColumns = [
+  { name: 'À faire', position: 1 },
+  { name: 'En cours', position: 2 },
+  { name: 'Terminé', position: 3 }
+]
+
+// Essayer de se connecter à PostgreSQL, sinon utiliser le stockage en mémoire
+let useDatabase = true // Activer PostgreSQL par défaut
+let pool = null
+
+try {
+  const { Pool } = require('pg')
+
+  // Configuration de la connexion PostgreSQL avec les variables d'environnement
+  pool = new Pool({
+    host: process.env.PGHOST || 'localhost',
+    user: process.env.PGUSER || 'postgres',
+    password: process.env.PGPASSWORD || '',
+    database: process.env.PGDATABASE || 'epitrello',
+    port: process.env.PGPORT || 5432,
+    // Options supplémentaires pour une meilleure gestion
+    max: 20, // Nombre maximum de clients dans le pool
+    idleTimeoutMillis: 30000, // Temps avant fermeture d'une connexion inactive
+    connectionTimeoutMillis: 2000 // Temps limite pour établir une connexion
+  })
+
+  // Tester la connexion
+  pool.connect((err, client, release) => {
+    if (err) {
+      console.error('❌ Erreur de connexion à PostgreSQL:', err.message)
+      console.log('🔄 Bascule vers le stockage en mémoire')
+      useDatabase = false
+      pool = null
+    } else {
+      console.log('✅ Connexion à PostgreSQL établie avec succès')
+      console.log('📊 Base de données:', process.env.PGDATABASE || 'epitrello')
+      console.log('👤 Utilisateur:', process.env.PGUSER || 'postgres')
+      release() // Libérer le client de test
+    }
+  })
+} catch (error) {
+  console.error('❌ Erreur lors de l\'initialisation de PostgreSQL:', error.message)
+  console.log('🔄 Utilisation du stockage en mémoire')
+  useDatabase = false
+  pool = null
+}
+
+// Configuration de la base de données
 
 // Initialiser le board par défaut au démarrage
 async function ensureDefaultBoard() {
@@ -56,25 +123,39 @@ async function ensureDefaultColumns() {
 // Route pour créer une colonne personnalisée
 app.post('/api/columns', async (req, res) => {
   try {
-    const { name, position, board_id } = req.body;
+    const { name, board_id } = req.body;
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: 'Le nom de la colonne est obligatoire' });
     }
-    const pos = position ? parseInt(position) : 1;
     const boardId = board_id ? parseInt(board_id) : 1;
+    
     if (useDatabase && pool) {
       const client = await pool.connect();
+      
+      // Calculer la position suivante en prenant le MAX + 1
+      const positionResult = await client.query(
+        'SELECT COALESCE(MAX(position), 0) + 1 as next_position FROM columns WHERE board_id = $1',
+        [boardId]
+      );
+      const nextPosition = positionResult.rows[0].next_position;
+      
       const result = await client.query(
         'INSERT INTO columns (name, position, board_id) VALUES ($1, $2, $3) RETURNING *',
-        [name.trim(), pos, boardId]
+        [name.trim(), nextPosition, boardId]
       );
       client.release();
       res.json({ success: true, column: result.rows[0] });
     } else {
+      // Pour le stockage en mémoire, calculer la position suivante
+      const existingColumns = inMemoryColumns.filter(col => col.board_id === boardId);
+      const nextPosition = existingColumns.length > 0 
+        ? Math.max(...existingColumns.map(col => col.position)) + 1 
+        : 1;
+        
       const newCol = {
         id: nextColumnId++,
         name: name.trim(),
-        position: pos,
+        position: nextPosition,
         board_id: boardId,
         created_at: new Date().toISOString()
       };
@@ -85,21 +166,6 @@ app.post('/api/columns', async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
-// Import du modèle Card
-const cardModel = require('./models/card')
-// Import du modèle Board
-const boardModel = require('./models/board')
-dotenv.config()
-// Import du modèle User
-const userModel = require('./models/user')
-
-// Configuration CORS
-app.use(cors({
-  origin: 'http://localhost:3000', // URL du frontend Next.js
-  credentials: true
-}))
-
-app.use(express.json())
 // Routes API Cards
 app.post('/api/cards', async (req, res) => {
   try {
@@ -191,6 +257,33 @@ app.post('/api/boards', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Le nom du board est requis' })
     }
     const board = await boardModel.createBoard({ name, description })
+    
+    // Créer automatiquement les trois colonnes de base pour le nouveau board
+    if (useDatabase && pool) {
+      const client = await pool.connect()
+      try {
+        for (const col of defaultColumns) {
+          await client.query(
+            'INSERT INTO columns (name, position, board_id) VALUES ($1, $2, $3)',
+            [col.name, col.position, board.id]
+          )
+        }
+      } finally {
+        client.release()
+      }
+    } else {
+      // Pour le stockage en mémoire
+      for (const col of defaultColumns) {
+        inMemoryColumns.push({
+          id: nextColumnId++,
+          name: col.name,
+          position: col.position,
+          board_id: board.id,
+          created_at: new Date().toISOString()
+        })
+      }
+    }
+    
     res.json({ success: true, board })
   } catch (error) {
     res.status(500).json({ success: false, message: error.message })
@@ -329,58 +422,6 @@ app.post('/api/users/create-default', async (req, res) => {
   }
 })
 
-// Stockage en mémoire pour simuler la base de données
-let inMemoryColumns = []
-const inMemoryCards = []
-let nextColumnId = 1
-let nextCardId = 1
-
-// Modèle de colonnes de base
-const defaultColumns = [
-  { name: 'À faire', position: 1 },
-  { name: 'En cours', position: 2 },
-  { name: 'Terminé', position: 3 }
-]
-
-// Essayer de se connecter à PostgreSQL, sinon utiliser le stockage en mémoire
-let useDatabase = true // Activer PostgreSQL par défaut
-let pool = null
-
-try {
-  const { Pool } = require('pg')
-
-  // Configuration de la connexion PostgreSQL avec les variables d'environnement
-  pool = new Pool({
-    host: process.env.PGHOST || 'localhost',
-    user: process.env.PGUSER || 'postgres',
-    password: process.env.PGPASSWORD || '',
-    database: process.env.PGDATABASE || 'epitrello',
-    port: process.env.PGPORT || 5432,
-    // Options supplémentaires pour une meilleure gestion
-    max: 20, // Nombre maximum de clients dans le pool
-    idleTimeoutMillis: 30000, // Temps avant fermeture d'une connexion inactive
-    connectionTimeoutMillis: 2000 // Temps limite pour établir une connexion
-  })
-
-  // Test de connexion
-  pool.query('SELECT NOW()', (err, res) => {
-    if (err) {
-      console.error('❌ Erreur de connexion PostgreSQL:', err.message)
-      useDatabase = false
-      console.log('⚠️ Basculement vers le stockage en mémoire')
-    } else {
-      console.log('✅ Connexion à PostgreSQL établie avec succès')
-      console.log('📊 Base de données:', process.env.PGDATABASE)
-      console.log('👤 Utilisateur:', process.env.PGUSER)
-      useDatabase = true
-    }
-  })
-} catch (error) {
-  console.error('❌ Erreur lors de l\'initialisation PostgreSQL:', error.message)
-  useDatabase = false
-  console.log('⚠️ PostgreSQL non disponible, utilisation du stockage en mémoire')
-}
-
 // Route pour créer les colonnes de base
 app.post('/api/columns/create-default', async (req, res) => {
   try {
@@ -442,10 +483,21 @@ app.post('/api/columns/create-default', async (req, res) => {
 // Route pour récupérer toutes les colonnes
 app.get('/api/columns', async (req, res) => {
   try {
+    const { board_id } = req.query;
+    
     if (useDatabase && pool) {
       // Utiliser PostgreSQL
       const client = await pool.connect()
-      const result = await client.query('SELECT * FROM columns ORDER BY position')
+      let result;
+      
+      if (board_id) {
+        // Filtrer par board_id si fourni
+        result = await client.query('SELECT * FROM columns WHERE board_id = $1 ORDER BY position', [parseInt(board_id)])
+      } else {
+        // Retourner toutes les colonnes sinon
+        result = await client.query('SELECT * FROM columns ORDER BY position')
+      }
+      
       client.release()
 
       res.json({
@@ -454,9 +506,16 @@ app.get('/api/columns', async (req, res) => {
       })
     } else {
       // Utiliser le stockage en mémoire
+      let columns = inMemoryColumns;
+      
+      if (board_id) {
+        // Filtrer par board_id si fourni
+        columns = inMemoryColumns.filter(col => col.board_id === parseInt(board_id));
+      }
+      
       res.json({
         success: true,
-        columns: inMemoryColumns
+        columns: columns
       })
     }
   } catch (error) {

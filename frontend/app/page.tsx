@@ -65,8 +65,9 @@ export default function Page() {
 
   // Fetch columns
   const fetchColumns = async () => {
+    if (!selectedBoardId) return;
     try {
-      const response = await fetch('http://localhost:3001/api/columns');
+      const response = await fetch(`http://localhost:3001/api/columns?board_id=${selectedBoardId}`);
       const data = await response.json();
       if (data.success) {
         setColumns(data.columns);
@@ -189,7 +190,6 @@ export default function Page() {
   // Create column
   const handleCreateColumn = async (columnData: {
     name: string;
-    position: number;
   }) => {
     try {
       setError(null);
@@ -198,7 +198,6 @@ export default function Page() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: columnData.name.trim(),
-          position: columnData.position,
           board_id: selectedBoardId ?? 1
         })
       });
@@ -318,6 +317,39 @@ export default function Page() {
     }
   };
 
+  // Delete board
+  const handleDeleteBoard = async (boardId: number) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce board ? Cette action est irréversible.')) {
+      return;
+    }
+
+    try {
+      setError(null);
+      const response = await fetch(`http://localhost:3001/api/boards/${boardId}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+      if (data.success) {
+        await fetchBoards();
+        // Si c'était le board actuel, sélectionner le premier board disponible
+        if (boardId === selectedBoardId) {
+          const updatedBoards = boards.filter(b => b.id !== boardId);
+          if (updatedBoards.length > 0) {
+            setSelectedBoardId(updatedBoards[0].id);
+          } else {
+            setSelectedBoardId(null);
+            setColumns([]);
+            setCards([]);
+          }
+        }
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      setError(`Erreur lors de la suppression du board: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
+    }
+  };
+
   // Initial load with auto-initialization
   useEffect(() => {
     const loadBoardsAndUsers = async () => {
@@ -371,6 +403,17 @@ export default function Page() {
               >
                 Nouveau board
               </button>
+              {selectedBoardId && (
+                <button
+                  onClick={() => handleDeleteBoard(selectedBoardId)}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  title="Supprimer ce board"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
               <button
                 onClick={() => setShowColumnModal(true)}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
