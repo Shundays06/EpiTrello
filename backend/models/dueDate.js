@@ -318,6 +318,30 @@ class DueDate {
     }
   }
 
+  // Compter les notifications non lues pour un utilisateur
+  static async getUnreadNotificationsCount(userId) {
+    const { pool, useDatabase, inMemoryData } = getDbInstance();
+    
+    if (useDatabase && pool) {
+      try {
+        const result = await pool.query(
+          'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND is_read = false',
+          [userId]
+        );
+        return parseInt(result.rows[0].count);
+      } catch (error) {
+        console.error('Erreur lors du comptage des notifications non lues:', error);
+        return 0;
+      }
+    } else {
+      // Fallback en mémoire
+      if (!inMemoryData.notifications) return 0;
+      return inMemoryData.notifications.filter(
+        notification => notification.user_id === userId && !notification.is_read
+      ).length;
+    }
+  }
+
   // Créer automatiquement les notifications pour les échéances
   static async createDueDateNotifications() {
     const { pool, useDatabase } = getDbInstance();

@@ -175,9 +175,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
           className="relative p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full"
           title="Notifications"
         >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5h5l-5-5m-6 3V9a9 9 0 10-18 0v5l-2 3h20l-2-3z" />
-          </svg>
+          
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs h-5 w-5 flex items-center justify-center">
               {unreadCount > 99 ? '99+' : unreadCount}
@@ -201,9 +199,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center space-x-2">
-            <svg className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5h5l-5-5m-6 3V9a9 9 0 10-18 0v5l-2 3h20l-2-3z" />
-            </svg>
             <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
             {unreadCount > 0 && (
               <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">

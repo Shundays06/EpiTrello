@@ -76,6 +76,7 @@ export default function Page() {
   const [showOrganizationsModal, setShowOrganizationsModal] = useState(false);
   const [showLabelsModal, setShowLabelsModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [labels, setLabels] = useState<Label[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -158,6 +159,20 @@ export default function Page() {
       }
     } catch (err) {
       console.error('Error fetching labels:', err);
+    }
+  };
+
+  // Fetch unread notifications count
+  const fetchUnreadNotificationsCount = async () => {
+    if (!currentUser) return;
+    try {
+      const response = await fetch(`http://localhost:3001/api/notifications/unread-count?user_id=${currentUser.id}`);
+      const data = await response.json();
+      if (data.success) {
+        setUnreadNotificationsCount(data.count);
+      }
+    } catch (err) {
+      console.error('Error fetching unread notifications count:', err);
     }
   };
 
@@ -473,6 +488,7 @@ export default function Page() {
   useEffect(() => {
     if (currentUser) {
       fetchBoards();
+      fetchUnreadNotificationsCount();
     } else {
       // Quand l'utilisateur se déconnecte, vider tout immédiatement
       setBoards([]);
@@ -481,6 +497,7 @@ export default function Page() {
       setCards([]);
       setError(null);
       setIsLoadingBoards(false);
+      setUnreadNotificationsCount(0);
     }
   }, [currentUser]);
 
@@ -526,10 +543,11 @@ export default function Page() {
                     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-3.5-3.5a.55.55 0 010-.78L20 9V6a8 8 0 10-16 0v3l3.5 3.72a.55.55 0 010 .78L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
-                    {/* Badge de notifications non lues - sera implémenté plus tard */}
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      3
-                    </span>
+                    {unreadNotificationsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {unreadNotificationsCount}
+                      </span>
+                    )}
                   </button>
                 </div>
               ) : (
@@ -729,7 +747,11 @@ export default function Page() {
       {currentUser && (
         <NotificationCenter
           isOpen={showNotificationsModal}
-          onClose={() => setShowNotificationsModal(false)}
+          onClose={() => {
+            setShowNotificationsModal(false);
+            // Rafraîchir le nombre de notifications après fermeture
+            fetchUnreadNotificationsCount();
+          }}
           currentUserId={currentUser.id}
         />
       )}

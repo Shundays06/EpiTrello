@@ -2086,6 +2086,32 @@ app.put('/api/notifications/:notificationId/read', async (req, res) => {
   }
 });
 
+// Récupérer le nombre de notifications non lues
+app.get('/api/notifications/unread-count', async (req, res) => {
+  try {
+    const { user_id } = req.query;
+    
+    if (!user_id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'user_id est requis' 
+      });
+    }
+    
+    const count = await dueDateModel.getUnreadNotificationsCount(parseInt(user_id));
+    
+    res.json({ 
+      success: true, 
+      count: count || 0
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
 // Marquer toutes les notifications comme lues
 app.put('/api/users/:userId/notifications/read-all', async (req, res) => {
   try {
