@@ -464,6 +464,83 @@ app.post('/api/users/create-default', async (req, res) => {
   }
 })
 
+// Routes d'authentification
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { username, email, password } = req.body
+    
+    if (!username || !email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Nom d\'utilisateur, email et mot de passe sont requis' 
+      })
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Le mot de passe doit contenir au moins 6 caractères' 
+      })
+    }
+
+    // Vérifier si l'email existe déjà
+    const existingUsers = await userModel.getAllUsers()
+    const existingUser = existingUsers.find(user => user.email === email)
+    
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Un compte avec cet email existe déjà' 
+      })
+    }
+
+    // Créer le nouvel utilisateur
+    const user = await userModel.createUser({ username, email, password })
+    res.status(201).json({ success: true, user })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body
+    
+    if (!email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email et mot de passe sont requis' 
+      })
+    }
+
+    // Récupérer tous les utilisateurs et trouver celui avec l'email correspondant
+    const users = await userModel.getAllUsers()
+    const user = users.find(u => u.email === email)
+    
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Email ou mot de passe incorrect' 
+      })
+    }
+
+    // Pour la démo, nous acceptons les mots de passe prédéfinis
+    const validDemoPasswords = ['admin123', 'manager123', 'member123', 'viewer123', 'password123']
+    const isValidPassword = validDemoPasswords.includes(password) || password === user.password
+    
+    if (!isValidPassword) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Email ou mot de passe incorrect' 
+      })
+    }
+
+    res.json({ success: true, user })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
 // Route pour créer les colonnes de base
 app.post('/api/columns/create-default', async (req, res) => {
   try {

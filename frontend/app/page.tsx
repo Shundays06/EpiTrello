@@ -7,6 +7,7 @@ import CreateBoardModal from '../components/CreateBoardModal';
 import InviteUserModal from '../components/InviteUserModal';
 import InvitationsModal from '../components/InvitationsModal';
 import LoginModal from '../components/LoginModal';
+import RegisterModal from '../components/RegisterModal';
 import UserProfileModal from '../components/UserProfileModal';
 import OrganizationsModal from '../components/OrganizationsModal';
 import KanbanBoard from '../components/KanbanBoard';
@@ -76,6 +77,7 @@ export default function Page() {
   const [showOrganizationsModal, setShowOrganizationsModal] = useState(false);
   const [showLabelsModal, setShowLabelsModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [labels, setLabels] = useState<Label[]>([]);
@@ -715,6 +717,23 @@ export default function Page() {
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onLogin={setCurrentUser}
+        onRegisterClick={() => {
+          setShowLoginModal(false);
+          setShowRegisterModal(true);
+        }}
+      />
+
+      <RegisterModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        onRegister={(user) => {
+          setCurrentUser(user);
+          setShowRegisterModal(false);
+        }}
+        onLoginClick={() => {
+          setShowRegisterModal(false);
+          setShowLoginModal(true);
+        }}
       />
 
       {currentUser && (
@@ -786,12 +805,20 @@ export default function Page() {
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
               Connectez-vous pour accéder à vos boards personnels et collaborer avec votre équipe.
             </p>
-            <button
-              onClick={() => setShowLoginModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-md text-lg font-medium transition-colors"
-            >
-              Se connecter
-            </button>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-md text-lg font-medium transition-colors"
+              >
+                Se connecter
+              </button>
+              <button
+                onClick={() => setShowRegisterModal(true)}
+                className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-md text-lg font-medium transition-colors"
+              >
+                S'inscrire
+              </button>
+            </div>
           </div>
         ) : isLoadingBoards ? (
           <div className="text-center py-16">
