@@ -10,6 +10,7 @@ const port = process.env.PORT || 3001;
 const cardModel = require('./models/card')
 const boardModel = require('./models/board')
 const userModel = require('./models/user')
+const invitationModel = require('./models/invitation')
 
 // Configuration des middlewares
 app.use(cors({
@@ -772,6 +773,169 @@ app.get('/api/columns/:columnId/cards', async (req, res) => {
     })
   }
 })
+
+// Routes API Invitations
+app.post('/api/invitations', async (req, res) => {
+  try {
+    const { email, board_id, invited_by } = req.body;
+    
+    if (!email || !board_id || !invited_by) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email, board_id et invited_by sont requis' 
+      });
+    }
+
+    // Valider le format email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Format d\'email invalide' 
+      });
+    }
+
+    // Vérifier que le board existe
+    const board = await boardModel.getBoardById(board_id);
+    if (!board) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Board non trouvé' 
+      });
+    }
+
+    // Vérifier que l'utilisateur qui invite existe
+    const inviter = await userModel.getUserById(invited_by);
+    if (!inviter) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Utilisateur invitant non trouvé' 
+      });
+    }
+
+    const invitation = await invitationModel.createInvitation({
+      email,
+      board_id: parseInt(board_id),
+      invited_by: parseInt(invited_by)
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Invitation créée avec succès',
+      invitation 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+app.get('/api/invitations', async (req, res) => {
+  try {
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email requis en paramètre de requête' 
+      });
+    }
+
+    const invitations = await invitationModel.getInvitationsByEmail(email);
+    
+    res.json({ 
+      success: true, 
+      invitations 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+app.get('/api/invitations/all', async (req, res) => {
+  try {
+    const invitations = await invitationModel.getAllInvitations();
+    
+    res.json({ 
+      success: true, 
+      invitations 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+app.get('/api/invitations/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    const invitation = await invitationModel.getInvitationByToken(token);
+    
+    if (!invitation) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Invitation non trouvée' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      invitation 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+app.post('/api/invitations/:token/accept', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    const result = await invitationModel.acceptInvitation(token);
+    
+    res.json({ 
+      success: true, 
+      message: 'Invitation acceptée avec succès',
+      invitation: result.invitation,
+      user: result.user
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+app.post('/api/invitations/:token/decline', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    const invitation = await invitationModel.declineInvitation(token);
+    
+    res.json({ 
+      success: true, 
+      message: 'Invitation déclinée',
+      invitation
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
 
 app.get('/', (req, res) => {
   res.send('Bienvenue sur EpiTrello API !')
