@@ -6,7 +6,8 @@ import CreateColumnModal from '../components/CreateColumnModal';
 import CreateBoardModal from '../components/CreateBoardModal';
 import InviteUserModal from '../components/InviteUserModal';
 import InvitationsModal from '../components/InvitationsModal';
-import UserLogin from '../components/UserLogin';
+import LoginModal from '../components/LoginModal';
+import UserProfileModal from '../components/UserProfileModal';
 import KanbanBoard from '../components/KanbanBoard';
 import EditCardModal from '../components/EditCardModal';
 
@@ -35,6 +36,7 @@ interface User {
   id: number;
   username: string;
   email: string;
+  created_at: string;
 }
 
 export default function Page() {
@@ -50,19 +52,28 @@ export default function Page() {
   const [showEditCardModal, setShowEditCardModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showInvitationsModal, setShowInvitationsModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch boards
+  // Fetch boards (seulement ceux accessibles par l'utilisateur)
   const fetchBoards = async () => {
+    if (!currentUser) {
+      setBoards([])
+      return
+    }
+
     try {
-      const response = await fetch('http://localhost:3001/api/boards');
+      const response = await fetch(`http://localhost:3001/api/boards?user_id=${currentUser.id}`);
       const data = await response.json();
       if (data.success) {
         setBoards(data.boards);
         if (data.boards.length > 0 && selectedBoardId === null) {
           setSelectedBoardId(data.boards[0].id);
+        } else if (data.boards.length === 0) {
+          setSelectedBoardId(null);
         }
       }
     } catch (err) {
@@ -227,6 +238,10 @@ export default function Page() {
     name: string;
     description: string;
   }) => {
+    if (!currentUser) {
+      throw new Error('Vous devez être connecté pour créer un board');
+    }
+
     try {
       setError(null);
       const response = await fetch('http://localhost:3001/api/boards', {
@@ -234,7 +249,8 @@ export default function Page() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           name: boardData.name.trim(), 
-          description: boardData.description.trim() 
+          description: boardData.description.trim(),
+          owner_id: currentUser.id
         })
       });
       if (!response.ok) {
@@ -404,6 +420,16 @@ export default function Page() {
     }
   }, [selectedBoardId]);
 
+  // Load boards when user changes
+  useEffect(() => {
+    if (currentUser) {
+      fetchBoards();
+    } else {
+      setBoards([]);
+      setSelectedBoardId(null);
+    }
+  }, [currentUser]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -420,15 +446,36 @@ export default function Page() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
               <h1 className="text-2xl font-bold text-gray-900">EpiTrello</h1>
-              <UserLogin 
-                onUserSelect={setCurrentUser} 
-                currentUser={currentUser}
-              />
+              
+              {/* Bouton de connexion/profil */}
+              {currentUser ? (
+                <button
+                  onClick={() => setShowProfileModal(true)}
+                  className="flex items-center space-x-2 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-md border border-blue-200 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    {currentUser.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-medium text-gray-900">
+                      {currentUser.username}
+                    </div>
+                    <div className="text-xs text-gray-600">Voir le profil</div>
+                  </div>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Se connecter
+                </button>
+              )}
             </div>
             <div className="flex gap-2 items-center">
               {!currentUser && (
                 <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-1 rounded-md text-sm">
-                  👆 Sélectionnez un utilisateur pour utiliser les invitations
+                  👆 Connectez-vous pour accéder à toutes les fonctionnalités
                 </div>
               )}
               <BoardSelect
@@ -543,6 +590,21 @@ export default function Page() {
           isOpen={showInvitationsModal}
           onClose={() => setShowInvitationsModal(false)}
           userEmail={currentUser.email}
+        />
+      )}
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLogin={setCurrentUser}
+      />
+
+      {currentUser && (
+        <UserProfileModal
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          user={currentUser}
+          onLogout={() => setCurrentUser(null)}
         />
       )}
 

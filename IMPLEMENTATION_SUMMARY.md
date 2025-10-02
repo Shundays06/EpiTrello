@@ -1,6 +1,42 @@
 # EpiTrello - Résumé des Fonctionnalités Implémentées
 
-## ✅ Issues GitHub Réalisées
+## ✅ Phase 1 - Système d'invitations et authentification (TERMINÉE)
+
+### Backend implémenté ✅
+1. **#22** - ✅ Modèle Invitation créé avec token sécurisé et expiration
+2. **#23** - ✅ API POST /invitations pour créer une invitation
+3. **#24** - ✅ API GET /invitations pour voir ses invitations reçues  
+4. **#25** - ✅ API POST /invitations/:token/accept pour accepter
+5. **#25** - ✅ API POST /invitations/:token/decline pour décliner
+6. **Base de données** - ✅ Table invitations avec index optimisés
+
+### Frontend implémenté ✅
+- ✅ **Système d'authentification complet** - Connexion/déconnexion avec modal
+- ✅ **Page de profil utilisateur** - Statistiques, invitations, boards accessibles
+- ✅ **Modal d'invitation** - Interface pour inviter des utilisateurs
+- ✅ **Modal des invitations reçues** - Voir et gérer ses invitations
+- ✅ **Comptes de démonstration** - Accès rapide aux comptes de test
+- ✅ **Interface sécurisée** - Fonctionnalités disponibles seulement si connecté
+
+### Workflow de test complet ✅
+1. **Connexion** - Se connecter avec admin@epitrello.com (password123)
+2. **Créer invitation** - Inviter test@example.com via le bouton "Inviter"
+3. **Changer d'utilisateur** - Se déconnecter et se connecter en tant que test@example.com
+4. **Voir invitations** - Cliquer sur "Invitations" pour voir les invitations reçues
+5. **Accepter invitation** - Accepter l'invitation directement dans l'interface
+6. **Profil utilisateur** - Voir ses statistiques via le bouton profil
+
+## 🔄 Prochaines phases
+
+### Phase 2 : Système de permissions et boards
+- Restriction d'accès aux boards selon les permissions
+- Table board_members pour gérer qui a accès à quoi
+- Système de rôles (admin, membre, lecteur)
+
+### Phase 3 : Gestion des organisations  
+- Création d'organisations
+- Gestion des membres d'organisation
+- Boards liés aux organisations
 
 ### 🗃️ Base de données
 - **#12** - ✅ **Choisir une base de données** : PostgreSQL configuré avec fallback en mémoire

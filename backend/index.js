@@ -11,6 +11,7 @@ const cardModel = require('./models/card')
 const boardModel = require('./models/board')
 const userModel = require('./models/user')
 const invitationModel = require('./models/invitation')
+const boardMemberModel = require('./models/boardMember')
 
 // Configuration des middlewares
 app.use(cors({
@@ -253,11 +254,15 @@ app.patch('/api/cards/:id/move', async (req, res) => {
 // Routes API Boards
 app.post('/api/boards', async (req, res) => {
   try {
-    const { name, description } = req.body
+    const { name, description, owner_id } = req.body
     if (!name) {
       return res.status(400).json({ success: false, message: 'Le nom du board est requis' })
     }
-    const board = await boardModel.createBoard({ name, description })
+    if (!owner_id) {
+      return res.status(400).json({ success: false, message: 'L\'ID du propriétaire est requis' })
+    }
+
+    const board = await boardModel.createBoard({ name, description, owner_id })
     
     // Créer automatiquement les trois colonnes de base pour le nouveau board
     if (useDatabase && pool) {
@@ -293,7 +298,16 @@ app.post('/api/boards', async (req, res) => {
 
 app.get('/api/boards', async (req, res) => {
   try {
-    const boards = await boardModel.getAllBoards()
+    const { user_id } = req.query
+    
+    if (!user_id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'user_id requis pour récupérer les boards' 
+      })
+    }
+
+    const boards = await boardModel.getAllBoards(user_id)
     res.json({ success: true, boards })
   } catch (error) {
     res.status(500).json({ success: false, message: error.message })
@@ -302,8 +316,16 @@ app.get('/api/boards', async (req, res) => {
 
 app.get('/api/boards/:id', async (req, res) => {
   try {
-    const board = await boardModel.getBoardById(req.params.id)
-    if (!board) return res.status(404).json({ success: false, message: 'Board non trouvé' })
+    const { user_id } = req.query
+    const board = await boardModel.getBoardById(req.params.id, user_id)
+    
+    if (!board) {
+      return res.status(404).json({ 
+        success: false, 
+        message: user_id ? 'Board non trouvé ou accès refusé' : 'Board non trouvé' 
+      })
+    }
+    
     res.json({ success: true, board })
   } catch (error) {
     res.status(500).json({ success: false, message: error.message })
@@ -312,21 +334,34 @@ app.get('/api/boards/:id', async (req, res) => {
 
 app.put('/api/boards/:id', async (req, res) => {
   try {
-    const { name, description } = req.body
-    const board = await boardModel.updateBoard(req.params.id, { name, description })
-    if (!board) return res.status(404).json({ success: false, message: 'Board non trouvé' })
+    const { name, description, user_id } = req.body
+    const board = await boardModel.updateBoard(req.params.id, { name, description }, user_id)
+    
+    if (!board) {
+      return res.status(404).json({ success: false, message: 'Board non trouvé' })
+    }
+    
     res.json({ success: true, board })
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message })
+    if (error.message.includes('Permissions insuffisantes')) {
+      res.status(403).json({ success: false, message: error.message })
+    } else {
+      res.status(500).json({ success: false, message: error.message })
+    }
   }
 })
 
 app.delete('/api/boards/:id', async (req, res) => {
   try {
-    await boardModel.deleteBoard(req.params.id)
+    const { user_id } = req.body
+    await boardModel.deleteBoard(req.params.id, user_id)
     res.json({ success: true, message: 'Board supprimé' })
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message })
+    if (error.message.includes('Seul le propriétaire')) {
+      res.status(403).json({ success: false, message: error.message })
+    } else {
+      res.status(500).json({ success: false, message: error.message })
+    }
   }
 })
 
@@ -774,6 +809,132 @@ app.get('/api/columns/:columnId/cards', async (req, res) => {
   }
 })
 
+// Routes API Board Members
+app.get('/api/boards/:boardId/members', async (req, res) => {
+  try {
+    const { boardId } = req.params
+    const { user_id } = req.query
+
+    // Vérifier que l'utilisateur a accès au board
+    if (user_id) {
+      const hasAccess = await boardMemberModel.hasAccessToBoard(user_id, boardId)
+      if (!hasAccess) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Accès refusé à ce board' 
+        })
+      }
+    }
+
+    const members = await boardMemberModel.getBoardMembers(boardId)
+    res.json({ success: true, members })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.post('/api/boards/:boardId/members', async (req, res) => {
+  try {
+    const { boardId } = req.params
+    const { user_id, role = 'member', added_by } = req.body
+
+    if (!user_id || !added_by) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'user_id et added_by sont requis' 
+      })
+    }
+
+    // Vérifier que celui qui ajoute a les permissions (owner ou admin)
+    const adderAccess = await boardMemberModel.hasAccessToBoard(added_by, boardId)
+    if (!adderAccess || !['owner', 'admin'].includes(adderAccess.role)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Permissions insuffisantes pour ajouter des membres' 
+      })
+    }
+
+    const member = await boardMemberModel.addMemberToBoard({
+      board_id: parseInt(boardId),
+      user_id: parseInt(user_id),
+      role,
+      added_by: parseInt(added_by)
+    })
+
+    res.json({ success: true, member })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+app.delete('/api/boards/:boardId/members/:userId', async (req, res) => {
+  try {
+    const { boardId, userId } = req.params
+    const { removed_by } = req.body
+
+    // Vérifier que celui qui supprime a les permissions
+    if (removed_by) {
+      const removerAccess = await boardMemberModel.hasAccessToBoard(removed_by, boardId)
+      if (!removerAccess || !['owner', 'admin'].includes(removerAccess.role)) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Permissions insuffisantes pour supprimer des membres' 
+        })
+      }
+    }
+
+    const removedMember = await boardMemberModel.removeMemberFromBoard(
+      parseInt(boardId), 
+      parseInt(userId)
+    )
+
+    if (!removedMember) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Membre non trouvé' 
+      })
+    }
+
+    res.json({ success: true, message: 'Membre supprimé du board' })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// Mettre à jour le système d'invitations pour ajouter automatiquement l'utilisateur au board
+app.post('/api/invitations/:token/accept', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    const result = await invitationModel.acceptInvitation(token);
+    
+    // Ajouter l'utilisateur au board automatiquement
+    try {
+      await boardMemberModel.addMemberToBoard({
+        board_id: result.invitation.board_id,
+        user_id: result.user.id,
+        role: 'member',
+        added_by: result.invitation.invited_by
+      })
+    } catch (memberError) {
+      // Si l'utilisateur est déjà membre, ce n'est pas grave
+      console.log('Utilisateur déjà membre du board ou erreur:', memberError.message)
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Invitation acceptée avec succès et accès au board accordé',
+      invitation: result.invitation,
+      user: result.user
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
 // Routes API Invitations
 app.post('/api/invitations', async (req, res) => {
   try {
@@ -889,26 +1050,6 @@ app.get('/api/invitations/:token', async (req, res) => {
     res.json({ 
       success: true, 
       invitation 
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
-    });
-  }
-});
-
-app.post('/api/invitations/:token/accept', async (req, res) => {
-  try {
-    const { token } = req.params;
-    
-    const result = await invitationModel.acceptInvitation(token);
-    
-    res.json({ 
-      success: true, 
-      message: 'Invitation acceptée avec succès',
-      invitation: result.invitation,
-      user: result.user
     });
   } catch (error) {
     res.status(500).json({ 
