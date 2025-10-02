@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Select from 'react-select';
 import Modal from './Modal';
+import LabelSelector from './LabelSelector';
 
 interface Column {
   id: number;
@@ -12,6 +13,13 @@ interface User {
   username: string;
 }
 
+interface Label {
+  id: number;
+  name: string;
+  color: string;
+  board_id: number;
+}
+
 interface Card {
   id: number;
   title: string;
@@ -20,6 +28,7 @@ interface Card {
   board_id: number;
   assigned_user_id?: number;
   created_at: string;
+  labels?: Label[];
 }
 
 interface EditCardModalProps {
@@ -28,6 +37,8 @@ interface EditCardModalProps {
   card: Card | null;
   columns: Column[];
   users: User[];
+  labels: Label[];
+  currentUserId: number;
   onUpdateCard: (cardId: number, cardData: {
     title: string;
     description: string;
@@ -43,6 +54,8 @@ const EditCardModal: React.FC<EditCardModalProps> = ({
   card,
   columns,
   users,
+  labels,
+  currentUserId,
   onUpdateCard,
   onDeleteCard
 }) => {
@@ -246,6 +259,31 @@ const EditCardModal: React.FC<EditCardModalProps> = ({
               isClearable={false}
             />
           </div>
+
+          {/* Labels */}
+          {card && (
+            <div>
+              <LabelSelector
+                cardId={card.id}
+                boardId={card.board_id}
+                currentUserId={currentUserId}
+                onLabelsChanged={async () => {
+                  // Recharger les labels de la carte après modification
+                  if (card) {
+                    try {
+                      const response = await fetch(`http://localhost:3001/api/cards/${card.id}/labels`);
+                      const data = await response.json();
+                      if (data.success) {
+                        card.labels = data.labels;
+                      }
+                    } catch (err) {
+                      // ignore
+                    }
+                  }
+                }}
+              />
+            </div>
+          )}
 
           {card && (
             <div className="text-xs text-gray-500">

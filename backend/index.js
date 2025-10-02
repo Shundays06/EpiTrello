@@ -15,6 +15,7 @@ const boardMemberModel = require('./models/boardMember')
 const organizationModel = require('./models/organization')
 const organizationMemberModel = require('./models/organizationMember')
 const permissionModel = require('./models/permission')
+const labelModel = require('./models/label')
 
 // Configuration des middlewares
 app.use(cors({
@@ -1412,6 +1413,246 @@ app.post('/api/organizations/:id/leave', async (req, res) => {
     res.json({ 
       success: true, 
       message: 'Vous avez quitté l\'organisation avec succès' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// =====================================
+// ROUTES POUR LES LABELS
+// =====================================
+
+// Créer un label
+app.post('/api/labels', async (req, res) => {
+  try {
+    const { name, color, board_id, created_by } = req.body;
+    
+    if (!name || !color || !board_id || !created_by) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'name, color, board_id et created_by sont requis' 
+      });
+    }
+
+    const label = await labelModel.createLabel({
+      name: name.trim(),
+      color,
+      board_id: parseInt(board_id),
+      created_by: parseInt(created_by)
+    });
+
+    res.status(201).json({ 
+      success: true, 
+      label 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Récupérer les labels d'un board
+app.get('/api/boards/:boardId/labels', async (req, res) => {
+  try {
+    const { boardId } = req.params;
+    
+    const labels = await labelModel.getLabelsByBoard(parseInt(boardId));
+    
+    res.json({ 
+      success: true, 
+      labels 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Mettre à jour un label
+app.put('/api/labels/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, color, user_id } = req.body;
+    
+    if (!name || !color) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'name et color sont requis' 
+      });
+    }
+
+    const label = await labelModel.updateLabel(
+      parseInt(id),
+      { name: name.trim(), color },
+      user_id ? parseInt(user_id) : null
+    );
+    
+    if (!label) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Label non trouvé' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      label 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Supprimer un label
+app.delete('/api/labels/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const success = await labelModel.deleteLabel(parseInt(id));
+    
+    if (!success) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Label non trouvé' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Label supprimé avec succès' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Ajouter un label à une carte
+app.post('/api/cards/:cardId/labels/:labelId', async (req, res) => {
+  try {
+    const { cardId, labelId } = req.params;
+    const { added_by } = req.body;
+    
+    if (!added_by) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'added_by est requis' 
+      });
+    }
+
+    const cardLabel = await labelModel.addLabelToCard(
+      parseInt(cardId),
+      parseInt(labelId),
+      parseInt(added_by)
+    );
+
+    if (!cardLabel) {
+      return res.status(409).json({ 
+        success: false, 
+        message: 'Ce label est déjà associé à cette carte' 
+      });
+    }
+
+    res.status(201).json({ 
+      success: true, 
+      cardLabel 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Retirer un label d'une carte
+app.delete('/api/cards/:cardId/labels/:labelId', async (req, res) => {
+  try {
+    const { cardId, labelId } = req.params;
+    
+    const success = await labelModel.removeLabelFromCard(
+      parseInt(cardId),
+      parseInt(labelId)
+    );
+    
+    if (!success) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Association carte-label non trouvée' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Label retiré de la carte avec succès' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Récupérer les labels d'une carte
+app.get('/api/cards/:cardId/labels', async (req, res) => {
+  try {
+    const { cardId } = req.params;
+    
+    const labels = await labelModel.getCardLabels(parseInt(cardId));
+    
+    res.json({ 
+      success: true, 
+      labels 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Récupérer les cartes avec leurs labels
+app.get('/api/boards/:boardId/cards-with-labels', async (req, res) => {
+  try {
+    const { boardId } = req.params;
+    
+    const cards = await labelModel.getCardsWithLabels(parseInt(boardId));
+    
+    res.json({ 
+      success: true, 
+      cards 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Récupérer les couleurs disponibles pour les labels
+app.get('/api/labels/colors', async (req, res) => {
+  try {
+    const colors = labelModel.getAvailableColors();
+    
+    res.json({ 
+      success: true, 
+      colors 
     });
   } catch (error) {
     res.status(500).json({ 

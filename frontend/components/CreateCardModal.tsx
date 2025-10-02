@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Select from 'react-select';
 import Modal from './Modal';
+import LabelSelector from './LabelSelector';
 
 interface Column {
   id: number;
@@ -17,11 +18,14 @@ interface CreateCardModalProps {
   onClose: () => void;
   columns: Column[];
   users: User[];
+  boardId?: number;
+  currentUserId?: number;
   onCreateCard: (cardData: {
     title: string;
     description: string;
     column_id: number;
     assigned_user_id: number;
+    labels?: number[];
   }) => Promise<void>;
 }
 
@@ -30,6 +34,8 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
   onClose,
   columns,
   users,
+  boardId,
+  currentUserId,
   onCreateCard
 }) => {
   const [formData, setFormData] = useState({
@@ -40,6 +46,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedLabels, setSelectedLabels] = useState<number[]>([]);
 
   const columnOptions = columns.map(column => ({
     value: column.id,
@@ -73,7 +80,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
     setError(null);
 
     try {
-      await onCreateCard(formData);
+      await onCreateCard({ ...formData, labels: selectedLabels });
       // Reset form and close modal
       setFormData({
         title: '',
@@ -81,6 +88,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
         column_id: 0,
         assigned_user_id: 0
       });
+      setSelectedLabels([]);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la création');
@@ -213,6 +221,17 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
           />
         </div>
 
+        {/* Sélecteur de labels */}
+        {boardId && currentUserId && (
+          <div>
+            <LabelSelector
+              cardId={0} // carte pas encore créée
+              boardId={boardId}
+              currentUserId={currentUserId}
+              onLabelsChanged={() => {}}
+            />
+          </div>
+        )}
         <div className="flex justify-end gap-3 pt-4">
           <button
             type="button"

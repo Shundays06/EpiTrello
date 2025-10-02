@@ -11,10 +11,18 @@ import UserProfileModal from '../components/UserProfileModal';
 import OrganizationsModal from '../components/OrganizationsModal';
 import KanbanBoard from '../components/KanbanBoard';
 import EditCardModal from '../components/EditCardModal';
+import ManageLabelsModal from '../components/ManageLabelsModal';
 
 interface Column {
   id: number;
   name: string;
+}
+
+interface Label {
+  id: number;
+  name: string;
+  color: string;
+  board_id: number;
 }
 
 interface Card {
@@ -25,6 +33,7 @@ interface Card {
   board_id: number;
   assigned_user_id?: number;
   created_at: string;
+  labels?: Label[];
 }
 
 interface Board {
@@ -59,7 +68,9 @@ export default function Page() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showOrganizationsModal, setShowOrganizationsModal] = useState(false);
+  const [showLabelsModal, setShowLabelsModal] = useState(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [labels, setLabels] = useState<Label[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoadingBoards, setIsLoadingBoards] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,12 +120,12 @@ export default function Page() {
     }
   };
 
-  // Fetch cards
+  // Fetch cards with labels
   const fetchCards = async () => {
     if (!selectedBoardId) return;
     try {
       console.log('Fetching cards for board:', selectedBoardId);
-      const response = await fetch(`http://localhost:3001/api/boards/${selectedBoardId}/cards`);
+      const response = await fetch(`http://localhost:3001/api/boards/${selectedBoardId}/cards-with-labels`);
       console.log('Response status:', response.status);
       const data = await response.json();
       console.log('Response data:', data);
@@ -126,6 +137,20 @@ export default function Page() {
     } catch (err) {
       console.error('Error fetching cards:', err);
       setError('Erreur lors du chargement des cartes');
+    }
+  };
+
+  // Fetch labels
+  const fetchLabels = async () => {
+    if (!selectedBoardId || !currentUser) return;
+    try {
+      const response = await fetch(`http://localhost:3001/api/boards/${selectedBoardId}/labels?user_id=${currentUser.id}`);
+      const data = await response.json();
+      if (data.success) {
+        setLabels(data.labels);
+      }
+    } catch (err) {
+      console.error('Error fetching labels:', err);
     }
   };
 
@@ -428,11 +453,12 @@ export default function Page() {
     loadBoardsAndUsers();
   }, []);
 
-  // Load columns and cards when board changes
+  // Load columns, cards and labels when board changes
   useEffect(() => {
     if (selectedBoardId) {
       fetchColumns();
       fetchCards();
+      fetchLabels();
     }
   }, [selectedBoardId]);
 
@@ -569,6 +595,18 @@ export default function Page() {
                   Organisations
                 </button>
               )}
+              {selectedBoardId && currentUser && (
+                <button
+                  onClick={() => setShowLabelsModal(true)}
+                  className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  title="Gérer les labels"
+                >
+                  <svg className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  Labels
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -593,6 +631,8 @@ export default function Page() {
         onClose={() => setShowCardModal(false)}
         columns={columns}
         users={users}
+        boardId={selectedBoardId || undefined}
+        currentUserId={currentUser?.id}
         onCreateCard={handleCreateCard}
       />
 
@@ -601,10 +641,14 @@ export default function Page() {
         onClose={() => {
           setShowEditCardModal(false);
           setSelectedCard(null);
+          // Rafraîchir les cartes après modification
+          fetchCards();
         }}
         card={selectedCard}
         columns={columns}
         users={users}
+        labels={labels}
+        currentUserId={currentUser?.id || 0}
         onUpdateCard={handleUpdateCard}
         onDeleteCard={handleDeleteCard}
       />
@@ -647,6 +691,16 @@ export default function Page() {
           isOpen={showOrganizationsModal}
           onClose={() => setShowOrganizationsModal(false)}
           currentUser={currentUser}
+        />
+      )}
+
+      {selectedBoardId && currentUser && (
+        <ManageLabelsModal
+          isOpen={showLabelsModal}
+          onClose={() => setShowLabelsModal(false)}
+          boardId={selectedBoardId}
+          currentUserId={currentUser.id}
+          onLabelsUpdated={fetchLabels}
         />
       )}
 

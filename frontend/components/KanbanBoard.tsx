@@ -25,6 +25,13 @@ interface Column {
   name: string;
 }
 
+interface Label {
+  id: number;
+  name: string;
+  color: string;
+  board_id: number;
+}
+
 interface Card {
   id: number;
   title: string;
@@ -33,6 +40,7 @@ interface Card {
   board_id: number;
   assigned_user_id?: number;
   created_at: string;
+  labels?: Label[];
 }
 
 interface User {
@@ -99,6 +107,33 @@ function DraggableCard({ card, users, onCardClick }: {
           </svg>
         </div>
       </div>
+      
+      {/* Labels */}
+      {card.labels && card.labels.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {card.labels.map((label) => (
+            <span
+              key={label.id}
+              className={`inline-block px-2 py-1 rounded text-xs font-medium text-white ${
+                label.color === 'red' ? 'bg-red-500' :
+                label.color === 'blue' ? 'bg-blue-500' :
+                label.color === 'green' ? 'bg-green-500' :
+                label.color === 'yellow' ? 'bg-yellow-500' :
+                label.color === 'purple' ? 'bg-purple-500' :
+                label.color === 'pink' ? 'bg-pink-500' :
+                label.color === 'indigo' ? 'bg-indigo-500' :
+                label.color === 'gray' ? 'bg-gray-500' :
+                label.color === 'orange' ? 'bg-orange-500' :
+                label.color === 'teal' ? 'bg-teal-500' :
+                'bg-gray-500'
+              }`}
+              title={label.name}
+            >
+              {label.name}
+            </span>
+          ))}
+        </div>
+      )}
       <p className="text-sm text-gray-600 mb-3 line-clamp-2">
         {card.description}
       </p>
