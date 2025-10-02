@@ -16,6 +16,7 @@ const organizationModel = require('./models/organization')
 const organizationMemberModel = require('./models/organizationMember')
 const permissionModel = require('./models/permission')
 const labelModel = require('./models/label')
+const checklistModel = require('./models/checklist')
 
 // Configuration des middlewares
 app.use(cors({
@@ -1663,6 +1664,239 @@ app.get('/api/labels/colors', async (req, res) => {
 });
 
 // =====================================
+// ROUTES POUR LES CHECKLISTS
+// =====================================
+
+// Créer une nouvelle checklist pour une carte
+app.post('/api/cards/:cardId/checklists', async (req, res) => {
+  try {
+    const { cardId } = req.params;
+    const { title, user_id } = req.body;
+    
+    if (!title || !user_id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'title et user_id sont requis' 
+      });
+    }
+    
+    const checklist = await checklistModel.createChecklist(
+      parseInt(cardId),
+      title,
+      parseInt(user_id)
+    );
+    
+    res.json({ 
+      success: true, 
+      checklist 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Obtenir toutes les checklists d'une carte
+app.get('/api/cards/:cardId/checklists', async (req, res) => {
+  try {
+    const { cardId } = req.params;
+    
+    const checklists = await checklistModel.getChecklistsByCardId(parseInt(cardId));
+    
+    res.json({ 
+      success: true, 
+      checklists 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Modifier une checklist
+app.put('/api/checklists/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, user_id } = req.body;
+    
+    if (!title) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'title est requis' 
+      });
+    }
+    
+    const checklist = await checklistModel.updateChecklist(
+      parseInt(id),
+      title,
+      parseInt(user_id)
+    );
+    
+    if (!checklist) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Checklist non trouvée' 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      checklist 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Supprimer une checklist
+app.delete('/api/checklists/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const success = await checklistModel.deleteChecklist(parseInt(id));
+    
+    if (!success) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Checklist non trouvée' 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Checklist supprimée avec succès' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Créer un nouvel élément de checklist
+app.post('/api/checklists/:checklistId/items', async (req, res) => {
+  try {
+    const { checklistId } = req.params;
+    const { text, user_id } = req.body;
+    
+    if (!text || !user_id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'text et user_id sont requis' 
+      });
+    }
+    
+    const item = await checklistModel.createChecklistItem(
+      parseInt(checklistId),
+      text,
+      parseInt(user_id)
+    );
+    
+    res.json({ 
+      success: true, 
+      item 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Obtenir tous les éléments d'une checklist
+app.get('/api/checklists/:checklistId/items', async (req, res) => {
+  try {
+    const { checklistId } = req.params;
+    
+    const items = await checklistModel.getChecklistItems(parseInt(checklistId));
+    
+    res.json({ 
+      success: true, 
+      items 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Modifier un élément de checklist
+app.put('/api/checklist-items/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text, is_completed, user_id } = req.body;
+    
+    if (text === undefined && is_completed === undefined) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'text ou is_completed est requis' 
+      });
+    }
+    
+    const item = await checklistModel.updateChecklistItem(
+      parseInt(id),
+      text,
+      is_completed,
+      parseInt(user_id)
+    );
+    
+    if (!item) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Élément de checklist non trouvé' 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      item 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Supprimer un élément de checklist
+app.delete('/api/checklist-items/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const success = await checklistModel.deleteChecklistItem(parseInt(id));
+    
+    if (!success) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Élément de checklist non trouvé' 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Élément de checklist supprimé avec succès' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// =====================================
 // ROUTES POUR LES PERMISSIONS
 // =====================================
 
@@ -1761,6 +1995,9 @@ app.get('/', (req, res) => {
   res.send('Bienvenue sur EpiTrello API !')
 })
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`Serveur backend EpiTrello lancé sur le port ${port}`)
+  
+  // Initialiser les tables de checklists
+  await checklistModel.initializeTables();
 })

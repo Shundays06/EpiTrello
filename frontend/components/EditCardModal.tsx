@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Select from 'react-select';
 import Modal from './Modal';
 import LabelSelector from './LabelSelector';
+import ChecklistManager from './ChecklistManager';
 
 interface Column {
   id: number;
@@ -280,6 +281,22 @@ const EditCardModal: React.FC<EditCardModalProps> = ({
                       // ignore
                     }
                   }
+                }}
+              />
+            </div>
+          )}
+
+          {/* Checklists */}
+          {card && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Checklists
+              </label>
+              <ChecklistManager
+                cardId={card.id}
+                currentUserId={currentUserId}
+                onChecklistsChanged={() => {
+                  // Pas besoin de recharger, les checklists se gèrent elles-mêmes
                 }}
               />
             </div>
