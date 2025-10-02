@@ -4,6 +4,9 @@ import BoardSelect from '../components/BoardSelect';
 import CreateCardModal from '../components/CreateCardModal';
 import CreateColumnModal from '../components/CreateColumnModal';
 import CreateBoardModal from '../components/CreateBoardModal';
+import InviteUserModal from '../components/InviteUserModal';
+import InvitationsModal from '../components/InvitationsModal';
+import UserLogin from '../components/UserLogin';
 import KanbanBoard from '../components/KanbanBoard';
 import EditCardModal from '../components/EditCardModal';
 
@@ -31,6 +34,7 @@ interface Board {
 interface User {
   id: number;
   username: string;
+  email: string;
 }
 
 export default function Page() {
@@ -44,7 +48,10 @@ export default function Page() {
   const [showCardModal, setShowCardModal] = useState(false);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [showEditCardModal, setShowEditCardModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showInvitationsModal, setShowInvitationsModal] = useState(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch boards
@@ -104,6 +111,8 @@ export default function Page() {
       const data = await response.json();
       if (data.success) {
         setUsers(data.users);
+        // Ne plus définir automatiquement l'utilisateur admin
+        // L'utilisateur devra se "connecter" manuellement
       }
     } catch (err) {
       setError('Erreur lors du chargement des utilisateurs');
@@ -409,8 +418,19 @@ export default function Page() {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-gray-900">EpiTrello</h1>
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold text-gray-900">EpiTrello</h1>
+              <UserLogin 
+                onUserSelect={setCurrentUser} 
+                currentUser={currentUser}
+              />
+            </div>
             <div className="flex gap-2 items-center">
+              {!currentUser && (
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-1 rounded-md text-sm">
+                  👆 Sélectionnez un utilisateur pour utiliser les invitations
+                </div>
+              )}
               <BoardSelect
                 boards={boards}
                 selectedBoardId={selectedBoardId}
@@ -445,6 +465,30 @@ export default function Page() {
               >
                 Nouvelle carte
               </button>
+              {selectedBoardId && currentUser && (
+                <button
+                  onClick={() => setShowInviteModal(true)}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  title="Inviter un utilisateur"
+                >
+                  <svg className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Inviter
+                </button>
+              )}
+              {currentUser && (
+                <button
+                  onClick={() => setShowInvitationsModal(true)}
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  title="Voir mes invitations"
+                >
+                  <svg className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 7.89a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Invitations
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -483,6 +527,24 @@ export default function Page() {
         onUpdateCard={handleUpdateCard}
         onDeleteCard={handleDeleteCard}
       />
+
+      {selectedBoardId && currentUser && (
+        <InviteUserModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          boardId={selectedBoardId}
+          boardName={boards.find(b => b.id === selectedBoardId)?.name || 'Board'}
+          currentUserId={currentUser.id}
+        />
+      )}
+
+      {currentUser && (
+        <InvitationsModal
+          isOpen={showInvitationsModal}
+          onClose={() => setShowInvitationsModal(false)}
+          userEmail={currentUser.email}
+        />
+      )}
 
       {/* Error display */}
       {error && (
