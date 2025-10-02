@@ -8,6 +8,7 @@ import InviteUserModal from '../components/InviteUserModal';
 import InvitationsModal from '../components/InvitationsModal';
 import LoginModal from '../components/LoginModal';
 import UserProfileModal from '../components/UserProfileModal';
+import OrganizationsModal from '../components/OrganizationsModal';
 import KanbanBoard from '../components/KanbanBoard';
 import EditCardModal from '../components/EditCardModal';
 
@@ -54,6 +55,7 @@ export default function Page() {
   const [showInvitationsModal, setShowInvitationsModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showOrganizationsModal, setShowOrganizationsModal] = useState(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoadingBoards, setIsLoadingBoards] = useState(false);
@@ -550,6 +552,18 @@ export default function Page() {
                   Invitations
                 </button>
               )}
+              {currentUser && (
+                <button
+                  onClick={() => setShowOrganizationsModal(true)}
+                  className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  title="Gérer mes organisations"
+                >
+                  <svg className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  Organisations
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -619,6 +633,14 @@ export default function Page() {
           onClose={() => setShowProfileModal(false)}
           user={currentUser}
           onLogout={() => setCurrentUser(null)}
+        />
+      )}
+
+      {currentUser && (
+        <OrganizationsModal
+          isOpen={showOrganizationsModal}
+          onClose={() => setShowOrganizationsModal(false)}
+          currentUser={currentUser}
         />
       )}
 

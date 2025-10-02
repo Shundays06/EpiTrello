@@ -12,6 +12,8 @@ const boardModel = require('./models/board')
 const userModel = require('./models/user')
 const invitationModel = require('./models/invitation')
 const boardMemberModel = require('./models/boardMember')
+const organizationModel = require('./models/organization')
+const organizationMemberModel = require('./models/organizationMember')
 
 // Configuration des middlewares
 app.use(cors({
@@ -1069,6 +1071,365 @@ app.post('/api/invitations/:token/decline', async (req, res) => {
       success: true, 
       message: 'Invitation déclinée',
       invitation
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// =====================================
+// ROUTES POUR LES ORGANISATIONS
+// =====================================
+
+// Créer une organisation
+app.post('/api/organizations', async (req, res) => {
+  try {
+    const { name, description, owner_id } = req.body;
+    
+    if (!name || !owner_id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Le nom et le propriétaire sont requis' 
+      });
+    }
+
+    const organization = await organizationModel.createOrganization({
+      name,
+      description: description || '',
+      owner_id
+    });
+
+    res.status(201).json({ 
+      success: true, 
+      organization 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Récupérer toutes les organisations (avec accès utilisateur)
+app.get('/api/organizations', async (req, res) => {
+  try {
+    const { user_id } = req.query;
+    
+    const organizations = await organizationModel.getAllOrganizations(user_id ? parseInt(user_id) : null);
+    
+    res.json({ 
+      success: true, 
+      organizations 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Récupérer une organisation par son ID
+app.get('/api/organizations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_id } = req.query;
+    
+    const organization = await organizationModel.getOrganizationById(
+      parseInt(id), 
+      user_id ? parseInt(user_id) : null
+    );
+    
+    if (!organization) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Organisation non trouvée ou accès refusé' 
+      });
+    }
+
+    // Récupérer aussi les membres
+    const members = await organizationMemberModel.getOrganizationMembers(parseInt(id));
+    
+    res.json({ 
+      success: true, 
+      organization: {
+        ...organization,
+        members
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Mettre à jour une organisation
+app.put('/api/organizations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, user_id } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Le nom est requis' 
+      });
+    }
+
+    const organization = await organizationModel.updateOrganization(
+      parseInt(id),
+      { name, description },
+      user_id ? parseInt(user_id) : null
+    );
+    
+    if (!organization) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Organisation non trouvée' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      organization 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Supprimer une organisation
+app.delete('/api/organizations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_id } = req.body;
+    
+    const success = await organizationModel.deleteOrganization(
+      parseInt(id),
+      user_id ? parseInt(user_id) : null
+    );
+    
+    if (!success) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Organisation non trouvée' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Organisation supprimée avec succès' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// =====================================
+// ROUTES POUR LES MEMBRES D'ORGANISATION
+// =====================================
+
+// Ajouter un membre à une organisation
+app.post('/api/organizations/:id/add-member', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_id, role = 'member', added_by } = req.body;
+    
+    if (!user_id || !added_by) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'L\'ID utilisateur et l\'ajouteur sont requis' 
+      });
+    }
+
+    // Vérifier que l'ajouteur a les permissions
+    const adderRole = await organizationMemberModel.isMemberOfOrganization(parseInt(id), parseInt(added_by));
+    if (!adderRole || !['owner', 'admin'].includes(adderRole)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Permissions insuffisantes pour ajouter des membres' 
+      });
+    }
+
+    const member = await organizationMemberModel.addMemberToOrganization({
+      organization_id: parseInt(id),
+      user_id: parseInt(user_id),
+      role,
+      added_by: parseInt(added_by)
+    });
+
+    res.status(201).json({ 
+      success: true, 
+      member 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Récupérer les membres d'une organisation
+app.get('/api/organizations/:id/members', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_id } = req.query;
+    
+    // Vérifier que l'utilisateur a accès à l'organisation
+    if (user_id) {
+      const userRole = await organizationMemberModel.isMemberOfOrganization(parseInt(id), parseInt(user_id));
+      if (!userRole) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Accès refusé à cette organisation' 
+        });
+      }
+    }
+
+    const members = await organizationMemberModel.getOrganizationMembers(parseInt(id));
+    
+    res.json({ 
+      success: true, 
+      members 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Mettre à jour le rôle d'un membre
+app.put('/api/organizations/:id/members/:userId', async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+    const { role, updated_by } = req.body;
+    
+    if (!role || !updated_by) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Le rôle et l\'ID de l\'utilisateur qui modifie sont requis' 
+      });
+    }
+
+    const member = await organizationMemberModel.updateMemberRole(
+      parseInt(id),
+      parseInt(userId),
+      role,
+      parseInt(updated_by)
+    );
+
+    res.json({ 
+      success: true, 
+      member 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Retirer un membre d'une organisation
+app.delete('/api/organizations/:id/members/:userId', async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+    const { removed_by } = req.body;
+    
+    if (!removed_by) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'L\'ID de l\'utilisateur qui retire est requis' 
+      });
+    }
+
+    const success = await organizationMemberModel.removeMemberFromOrganization(
+      parseInt(id),
+      parseInt(userId),
+      parseInt(removed_by)
+    );
+    
+    if (!success) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Membre non trouvé' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Membre retiré avec succès' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Quitter une organisation (auto-retrait)
+app.post('/api/organizations/:id/leave', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_id } = req.body;
+    
+    if (!user_id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'L\'ID utilisateur est requis' 
+      });
+    }
+
+    const success = await organizationMemberModel.leaveOrganization(
+      parseInt(id),
+      parseInt(user_id)
+    );
+    
+    if (!success) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Vous n\'êtes pas membre de cette organisation' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Vous avez quitté l\'organisation avec succès' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Récupérer les organisations d'un utilisateur
+app.get('/api/users/:userId/organizations', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const organizations = await organizationMemberModel.getUserOrganizations(parseInt(userId));
+    
+    res.json({ 
+      success: true, 
+      organizations 
     });
   } catch (error) {
     res.status(500).json({ 
