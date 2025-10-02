@@ -1,26 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
+
+interface Organization {
+  id: number;
+  name: string;
+  description: string;
+  user_role: string;
+}
 
 interface CreateBoardModalProps {
   isOpen: boolean;
   onClose: () => void;
+  currentUserId: number | null;
   onCreateBoard: (boardData: {
     name: string;
     description: string;
+    organization_id?: number;
   }) => Promise<void>;
 }
 
 const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
   isOpen,
   onClose,
+  currentUserId,
   onCreateBoard
 }) => {
   const [formData, setFormData] = useState({
     name: '',
-    description: ''
+    description: '',
+    organization_id: undefined as number | undefined
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +50,8 @@ const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
       // Reset form and close modal
       setFormData({
         name: '',
-        description: ''
+        description: '',
+        organization_id: undefined
       });
       onClose();
     } catch (err) {
@@ -51,11 +64,36 @@ const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
   const handleClose = () => {
     setFormData({
       name: '',
-      description: ''
+      description: '',
+      organization_id: undefined
     });
     setError(null);
     onClose();
   };
+
+  // Charger les organisations de l'utilisateur
+  useEffect(() => {
+    const loadOrganizations = async () => {
+      if (!isOpen || !currentUserId) return;
+      
+      try {
+        const response = await fetch(`http://localhost:3001/api/organizations?user_id=${currentUserId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          // Filtrer seulement les organisations où l'utilisateur peut créer des boards
+          const eligibleOrgs = data.organizations.filter((org: Organization) => 
+            ['owner', 'admin'].includes(org.user_role)
+          );
+          setOrganizations(eligibleOrgs);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des organisations:', error);
+      }
+    };
+
+    loadOrganizations();
+  }, [isOpen, currentUserId]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Créer un nouveau board">
@@ -65,6 +103,32 @@ const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
             {error}
           </div>
         )}
+
+        {/* Sélection organisation */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Organisation
+          </label>
+          <select
+            value={formData.organization_id || ''}
+            onChange={(e) => setFormData({ 
+              ...formData, 
+              organization_id: e.target.value ? parseInt(e.target.value) : undefined 
+            })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            disabled={isLoading}
+          >
+            <option value="">Board personnel (aucune organisation)</option>
+            {organizations.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name} ({org.user_role === 'owner' ? 'Propriétaire' : 'Admin'})
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-sm text-gray-500">
+            Choisissez une organisation ou créez un board personnel
+          </p>
+        </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">

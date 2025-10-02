@@ -4,6 +4,9 @@ import Select from 'react-select';
 interface Board {
   id: number;
   name: string;
+  organization_name?: string;
+  user_role?: string;
+  organization_role?: string;
 }
 
 interface BoardSelectProps {
@@ -75,9 +78,23 @@ const BoardSelect: React.FC<BoardSelectProps> = ({
       noOptionsMessage={() => "Aucun board trouvé"}
       className="min-w-[200px]"
       formatOptionLabel={(option: any) => (
-        <div className="flex items-center">
-          <div className="w-3 h-3 rounded-full bg-orange-400 mr-2"></div>
-          <span>{option.label}</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className={`w-3 h-3 rounded-full mr-2 ${option.board.organization_name ? 'bg-teal-400' : 'bg-orange-400'}`}></div>
+            <div>
+              <span className="font-medium">{option.label}</span>
+              {option.board.organization_name && (
+                <div className="text-xs text-gray-500 mt-0.5">
+                  📁 {option.board.organization_name}
+                </div>
+              )}
+            </div>
+          </div>
+          {option.board.user_role === 'owner' && (
+            <div className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
+              Propriétaire
+            </div>
+          )}
         </div>
       )}
     />

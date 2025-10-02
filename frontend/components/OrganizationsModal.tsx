@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
+import InviteToOrganizationModal from './InviteToOrganizationModal';
 
 interface Organization {
   id: number;
@@ -47,6 +48,7 @@ const OrganizationsModal: React.FC<OrganizationsModalProps> = ({
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showOrgDetails, setShowOrgDetails] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Formulaire de création
@@ -342,9 +344,19 @@ const OrganizationsModal: React.FC<OrganizationsModalProps> = ({
             )}
 
             <div className="border-t pt-4">
-              <h4 className="font-medium text-gray-900 mb-3">
-                Membres ({selectedOrg.members?.length || 0})
-              </h4>
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="font-medium text-gray-900">
+                  Membres ({selectedOrg.members?.length || 0})
+                </h4>
+                {(selectedOrg.user_role === 'owner' || selectedOrg.user_role === 'admin') && (
+                  <button
+                    onClick={() => setShowInviteModal(true)}
+                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                  >
+                    + Inviter
+                  </button>
+                )}
+              </div>
               
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {selectedOrg.members?.map((member) => (
@@ -387,6 +399,20 @@ const OrganizationsModal: React.FC<OrganizationsModalProps> = ({
           </div>
         )}
       </div>
+
+      {/* Modal d'invitation */}
+      {selectedOrg && currentUser && (
+        <InviteToOrganizationModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          organizationId={selectedOrg.id}
+          organizationName={selectedOrg.name}
+          currentUserId={currentUser.id}
+          onMemberAdded={() => {
+            loadOrganizationDetails(selectedOrg.id); // Recharger les détails
+          }}
+        />
+      )}
     </Modal>
   );
 };

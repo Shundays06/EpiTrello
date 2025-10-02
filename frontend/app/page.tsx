@@ -31,6 +31,9 @@ interface Board {
   id: number;
   name: string;
   description: string;
+  organization_name?: string;
+  organization_role?: string;
+  user_role?: string;
 }
 
 interface User {
@@ -248,6 +251,7 @@ export default function Page() {
   const handleCreateBoard = async (boardData: {
     name: string;
     description: string;
+    organization_id?: number;
   }) => {
     if (!currentUser) {
       throw new Error('Vous devez être connecté pour créer un board');
@@ -261,7 +265,8 @@ export default function Page() {
         body: JSON.stringify({ 
           name: boardData.name.trim(), 
           description: boardData.description.trim(),
-          owner_id: currentUser.id
+          owner_id: currentUser.id,
+          organization_id: boardData.organization_id || null
         })
       });
       if (!response.ok) {
@@ -573,6 +578,7 @@ export default function Page() {
       <CreateBoardModal
         isOpen={showBoardModal}
         onClose={() => setShowBoardModal(false)}
+        currentUserId={currentUser?.id || null}
         onCreateBoard={handleCreateBoard}
       />
 

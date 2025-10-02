@@ -256,7 +256,7 @@ app.patch('/api/cards/:id/move', async (req, res) => {
 // Routes API Boards
 app.post('/api/boards', async (req, res) => {
   try {
-    const { name, description, owner_id } = req.body
+    const { name, description, owner_id, organization_id } = req.body
     if (!name) {
       return res.status(400).json({ success: false, message: 'Le nom du board est requis' })
     }
@@ -264,7 +264,7 @@ app.post('/api/boards', async (req, res) => {
       return res.status(400).json({ success: false, message: 'L\'ID du propriétaire est requis' })
     }
 
-    const board = await boardModel.createBoard({ name, description, owner_id })
+    const board = await boardModel.createBoard({ name, description, owner_id, organization_id })
     
     // Créer automatiquement les trois colonnes de base pour le nouveau board
     if (useDatabase && pool) {

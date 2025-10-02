@@ -5,15 +5,15 @@ class BoardModel {
     this.db = getDbInstance();
   }
 
-  // Créer un board avec propriétaire
-  async createBoard({ name, description, owner_id }) {
+  // Créer un board avec propriétaire et organisation
+  async createBoard({ name, description, owner_id, organization_id = null }) {
     if (this.db.useDatabase) {
       const client = await this.db.pool.connect();
       try {
         // Créer le board
         const result = await client.query(
-          'INSERT INTO boards (name, description, owner_id) VALUES ($1, $2, $3) RETURNING *',
-          [name, description, owner_id]
+          'INSERT INTO boards (name, description, owner_id, organization_id) VALUES ($1, $2, $3, $4) RETURNING *',
+          [name, description, owner_id, organization_id]
         );
 
         const board = result.rows[0];
@@ -42,6 +42,7 @@ class BoardModel {
         name,
         description,
         owner_id,
+        organization_id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -118,18 +119,31 @@ class BoardModel {
       const client = await this.db.pool.connect();
       try {
         if (user_id) {
-          // Retourner seulement les boards auxquels l'utilisateur a accès
+          // Retourner les boards auxquels l'utilisateur a accès :
+          // 1. Soit via membership direct du board
+          // 2. Soit via membership de l'organisation du board
           const result = await client.query(`
-            SELECT b.*, bm.role as user_role, bm.added_at as member_since
+            SELECT DISTINCT b.*, 
+                   COALESCE(bm.role, 'member') as user_role, 
+                   COALESCE(bm.added_at, om.added_at) as member_since,
+                   o.name as organization_name,
+                   om.role as organization_role
             FROM boards b
-            INNER JOIN board_members bm ON b.id = bm.board_id
-            WHERE bm.user_id = $1
-            ORDER BY bm.added_at DESC
+            LEFT JOIN board_members bm ON b.id = bm.board_id AND bm.user_id = $1
+            LEFT JOIN organizations o ON b.organization_id = o.id
+            LEFT JOIN organization_members om ON o.id = om.organization_id AND om.user_id = $1
+            WHERE bm.user_id = $1 OR om.user_id = $1
+            ORDER BY COALESCE(bm.added_at, om.added_at) DESC
           `, [user_id]);
           return result.rows;
         } else {
-          // Retourner tous les boards (pour admin)
-          const result = await client.query('SELECT * FROM boards ORDER BY created_at DESC');
+          // Retourner tous les boards avec informations d'organisation (pour admin)
+          const result = await client.query(`
+            SELECT b.*, o.name as organization_name
+            FROM boards b
+            LEFT JOIN organizations o ON b.organization_id = o.id
+            ORDER BY b.created_at DESC
+          `);
           return result.rows;
         }
       } finally {
@@ -141,25 +155,52 @@ class BoardModel {
       }
 
       if (user_id) {
-        // Filtrer selon les accès de l'utilisateur
+        // Filtrer selon les accès de l'utilisateur (board direct ou organisation)
         const userBoardIds = this.db.inMemoryData.board_members?.filter(
           bm => bm.user_id === parseInt(user_id)
         ).map(bm => bm.board_id) || [];
 
+        // Aussi récupérer les boards via les organisations
+        const userOrgIds = this.db.inMemoryData.organization_members?.filter(
+          om => om.user_id === parseInt(user_id)
+        ).map(om => om.organization_id) || [];
+
+        const orgBoardIds = this.db.inMemoryData.boards?.filter(
+          board => board.organization_id && userOrgIds.includes(board.organization_id)
+        ).map(board => board.id) || [];
+
+        const allAccessibleBoardIds = [...new Set([...userBoardIds, ...orgBoardIds])];
+
         return this.db.inMemoryData.boards
-          .filter(board => userBoardIds.includes(board.id))
+          .filter(board => allAccessibleBoardIds.includes(board.id))
           .map(board => {
-            const membership = this.db.inMemoryData.board_members.find(
+            const membership = this.db.inMemoryData.board_members?.find(
               bm => bm.board_id === board.id && bm.user_id === parseInt(user_id)
             );
+            const org = board.organization_id ? 
+              this.db.inMemoryData.organizations?.find(o => o.id === board.organization_id) : null;
+            const orgMembership = org ? 
+              this.db.inMemoryData.organization_members?.find(
+                om => om.organization_id === org.id && om.user_id === parseInt(user_id)
+              ) : null;
+
             return {
               ...board,
               user_role: membership?.role || 'member',
-              member_since: membership?.added_at
+              member_since: membership?.added_at || orgMembership?.added_at,
+              organization_name: org?.name || null,
+              organization_role: orgMembership?.role || null
             };
           });
       } else {
-        return this.db.inMemoryData.boards;
+        return this.db.inMemoryData.boards.map(board => {
+          const org = board.organization_id ? 
+            this.db.inMemoryData.organizations?.find(o => o.id === board.organization_id) : null;
+          return {
+            ...board,
+            organization_name: org?.name || null
+          };
+        });
       }
     }
   }
