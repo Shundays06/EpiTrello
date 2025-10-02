@@ -17,6 +17,7 @@ const organizationMemberModel = require('./models/organizationMember')
 const permissionModel = require('./models/permission')
 const labelModel = require('./models/label')
 const checklistModel = require('./models/checklist')
+const dueDateModel = require('./models/dueDate')
 
 // Configuration des middlewares
 app.use(cors({
@@ -1897,6 +1898,250 @@ app.delete('/api/checklist-items/:id', async (req, res) => {
 });
 
 // =====================================
+// ROUTES POUR LES DATES D'ÉCHÉANCE ET NOTIFICATIONS
+// =====================================
+
+// Définir une date d'échéance pour une carte
+app.put('/api/cards/:cardId/due-date', async (req, res) => {
+  try {
+    const { cardId } = req.params;
+    const { due_date, user_id } = req.body;
+    
+    if (!due_date || !user_id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'due_date et user_id sont requis' 
+      });
+    }
+    
+    const card = await dueDateModel.updateCardDueDate(
+      parseInt(cardId),
+      due_date,
+      parseInt(user_id)
+    );
+    
+    if (!card) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Carte non trouvée' 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      card 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Marquer une date d'échéance comme terminée ou non terminée
+app.put('/api/cards/:cardId/due-date/complete', async (req, res) => {
+  try {
+    const { cardId } = req.params;
+    const { user_id, completed = true } = req.body;
+    
+    if (!user_id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'user_id est requis' 
+      });
+    }
+    
+    let card;
+    if (completed) {
+      card = await dueDateModel.markDueDateCompleted(
+        parseInt(cardId),
+        parseInt(user_id)
+      );
+    } else {
+      card = await dueDateModel.markDueDateUncompleted(parseInt(cardId));
+    }
+    
+    if (!card) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Carte non trouvée' 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      card 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Supprimer une date d'échéance
+app.delete('/api/cards/:cardId/due-date', async (req, res) => {
+  try {
+    const { cardId } = req.params;
+    
+    const card = await dueDateModel.removeDueDate(parseInt(cardId));
+    
+    if (!card) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Carte non trouvée' 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      card 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Obtenir les cartes dues bientôt pour un utilisateur
+app.get('/api/users/:userId/cards-due-soon', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const cards = await dueDateModel.getCardsDueSoon(parseInt(userId));
+    
+    res.json({ 
+      success: true, 
+      cards 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Obtenir les notifications d'un utilisateur
+app.get('/api/users/:userId/notifications', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { limit } = req.query;
+    
+    const notifications = await dueDateModel.getUserNotifications(
+      parseInt(userId), 
+      parseInt(limit) || 20
+    );
+    
+    res.json({ 
+      success: true, 
+      notifications 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Marquer une notification comme lue
+app.put('/api/notifications/:notificationId/read', async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+    const { user_id } = req.body;
+    
+    if (!user_id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'user_id est requis' 
+      });
+    }
+    
+    const notification = await dueDateModel.markNotificationAsRead(
+      parseInt(notificationId),
+      parseInt(user_id)
+    );
+    
+    if (!notification) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Notification non trouvée' 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      notification 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Marquer toutes les notifications comme lues
+app.put('/api/users/:userId/notifications/read-all', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const result = await dueDateModel.markAllNotificationsAsRead(parseInt(userId));
+    
+    res.json({ 
+      success: true, 
+      updated: result.updated 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Obtenir le nombre de notifications non lues
+app.get('/api/users/:userId/notifications/unread-count', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const count = await dueDateModel.getUnreadNotificationCount(parseInt(userId));
+    
+    res.json({ 
+      success: true, 
+      count 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Créer manuellement les notifications d'échéance (pour tester)
+app.post('/api/notifications/create-due-date-notifications', async (req, res) => {
+  try {
+    await dueDateModel.createDueDateNotifications();
+    
+    res.json({ 
+      success: true, 
+      message: 'Notifications d\'échéance créées' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// =====================================
 // ROUTES POUR LES PERMISSIONS
 // =====================================
 
@@ -2000,4 +2245,12 @@ app.listen(port, async () => {
   
   // Initialiser les tables de checklists
   await checklistModel.initializeTables();
+  
+  // Initialiser les tables de dates d'échéance et notifications
+  await dueDateModel.initializeTables();
+  
+  // Créer les notifications d'échéance toutes les 30 minutes
+  setInterval(async () => {
+    await dueDateModel.createDueDateNotifications();
+  }, 30 * 60 * 1000); // 30 minutes
 })

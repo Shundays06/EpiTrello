@@ -37,10 +37,15 @@ interface Card {
   title: string;
   description: string;
   column_id: number;
+  position: number;
   board_id: number;
   assigned_user_id?: number;
   created_at: string;
   labels?: Label[];
+  due_date?: string;
+  due_date_completed?: boolean;
+  due_date_completed_at?: string;
+  due_date_completed_by?: number;
 }
 
 interface User {

@@ -12,6 +12,7 @@ import OrganizationsModal from '../components/OrganizationsModal';
 import KanbanBoard from '../components/KanbanBoard';
 import EditCardModal from '../components/EditCardModal';
 import ManageLabelsModal from '../components/ManageLabelsModal';
+import NotificationCenter from '../components/NotificationCenter';
 
 interface Column {
   id: number;
@@ -30,10 +31,15 @@ interface Card {
   title: string;
   description: string;
   column_id: number;
+  position: number;
   board_id: number;
   assigned_user_id?: number;
   created_at: string;
   labels?: Label[];
+  due_date?: string;
+  due_date_completed?: boolean;
+  due_date_completed_at?: string;
+  due_date_completed_by?: number;
 }
 
 interface Board {
@@ -69,6 +75,7 @@ export default function Page() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showOrganizationsModal, setShowOrganizationsModal] = useState(false);
   const [showLabelsModal, setShowLabelsModal] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [labels, setLabels] = useState<Label[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -496,20 +503,35 @@ export default function Page() {
               
               {/* Bouton de connexion/profil */}
               {currentUser ? (
-                <button
-                  onClick={() => setShowProfileModal(true)}
-                  className="flex items-center space-x-2 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-md border border-blue-200 transition-colors"
-                >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                    {currentUser.username.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="text-left">
-                    <div className="text-sm font-medium text-gray-900">
-                      {currentUser.username}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowProfileModal(true)}
+                    className="flex items-center space-x-2 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-md border border-blue-200 transition-colors"
+                  >
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                      {currentUser.username.charAt(0).toUpperCase()}
                     </div>
-                    <div className="text-xs text-gray-600">Voir le profil</div>
-                  </div>
-                </button>
+                    <div className="text-left">
+                      <div className="text-sm font-medium text-gray-900">
+                        {currentUser.username}
+                      </div>
+                      <div className="text-xs text-gray-600">Voir le profil</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setShowNotificationsModal(true)}
+                    className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                    title="Notifications"
+                  >
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-3.5-3.5a.55.55 0 010-.78L20 9V6a8 8 0 10-16 0v3l3.5 3.72a.55.55 0 010 .78L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    {/* Badge de notifications non lues - sera implémenté plus tard */}
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      3
+                    </span>
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={() => setShowLoginModal(true)}
@@ -701,6 +723,14 @@ export default function Page() {
           boardId={selectedBoardId}
           currentUserId={currentUser.id}
           onLabelsUpdated={fetchLabels}
+        />
+      )}
+
+      {currentUser && (
+        <NotificationCenter
+          isOpen={showNotificationsModal}
+          onClose={() => setShowNotificationsModal(false)}
+          currentUserId={currentUser.id}
         />
       )}
 

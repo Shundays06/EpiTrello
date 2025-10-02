@@ -3,6 +3,7 @@ import Select from 'react-select';
 import Modal from './Modal';
 import LabelSelector from './LabelSelector';
 import ChecklistManager from './ChecklistManager';
+import DueDatePicker from './DueDatePicker';
 
 interface Column {
   id: number;
@@ -24,12 +25,32 @@ interface Label {
 interface Card {
   id: number;
   title: string;
-  description: string;
+  description?: string;
   column_id: number;
-  board_id: number;
+  position: number;
   assigned_user_id?: number;
-  created_at: string;
-  labels?: Label[];
+  board_id?: number;
+  created_at?: string;
+  labels?: Array<{
+    id: number;
+    name: string;
+    color: string;
+  }>;
+  checklists?: Array<{
+    id: number;
+    title: string;
+    items?: Array<{
+      id: number;
+      title: string;
+      completed: boolean;
+      completed_by?: number;
+      completed_at?: string;
+    }>;
+  }>;
+  due_date?: string;
+  due_date_completed?: boolean;
+  due_date_completed_at?: string;
+  due_date_completed_by?: number;
 }
 
 interface EditCardModalProps {
@@ -74,7 +95,7 @@ const EditCardModal: React.FC<EditCardModalProps> = ({
     if (card) {
       setFormData({
         title: card.title,
-        description: card.description,
+        description: card.description || '',
         column_id: card.column_id,
         assigned_user_id: card.assigned_user_id || 0
       });
@@ -266,7 +287,7 @@ const EditCardModal: React.FC<EditCardModalProps> = ({
             <div>
               <LabelSelector
                 cardId={card.id}
-                boardId={card.board_id}
+                boardId={card.board_id || 0}
                 currentUserId={currentUserId}
                 onLabelsChanged={async () => {
                   // Recharger les labels de la carte après modification
@@ -302,7 +323,42 @@ const EditCardModal: React.FC<EditCardModalProps> = ({
             </div>
           )}
 
+          {/* Date d'échéance */}
           {card && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date d'échéance
+              </label>
+              <DueDatePicker
+                cardId={card.id}
+                currentUserId={currentUserId}
+                dueDate={card.due_date}
+                dueDateCompleted={card.due_date_completed}
+                onDueDateChanged={async () => {
+                  // Recharger les données de la carte après modification de la date d'échéance
+                  if (card) {
+                    try {
+                      const response = await fetch(`http://localhost:3001/api/cards/${card.id}`);
+                      const data = await response.json();
+                      if (data.success) {
+                        // Mettre à jour les propriétés de date d'échéance
+                        card.due_date = data.card.due_date;
+                        card.due_date_completed = data.card.due_date_completed;
+                        card.due_date_completed_at = data.card.due_date_completed_at;
+                        card.due_date_completed_by = data.card.due_date_completed_by;
+                        // Forcer un re-render en mettant à jour l'état
+                        setFormData(prev => ({ ...prev }));
+                      }
+                    } catch (error) {
+                      console.error('Erreur lors du rafraîchissement de la carte:', error);
+                    }
+                  }
+                }}
+              />
+            </div>
+          )}
+
+          {card && card.created_at && (
             <div className="text-xs text-gray-500">
               Créée le {new Date(card.created_at).toLocaleDateString('fr-FR')} à {new Date(card.created_at).toLocaleTimeString('fr-FR')}
             </div>
