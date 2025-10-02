@@ -14,6 +14,7 @@ const invitationModel = require('./models/invitation')
 const boardMemberModel = require('./models/boardMember')
 const organizationModel = require('./models/organization')
 const organizationMemberModel = require('./models/organizationMember')
+const permissionModel = require('./models/permission')
 
 // Configuration des middlewares
 app.use(cors({
@@ -1411,6 +1412,82 @@ app.post('/api/organizations/:id/leave', async (req, res) => {
     res.json({ 
       success: true, 
       message: 'Vous avez quitté l\'organisation avec succès' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// =====================================
+// ROUTES POUR LES PERMISSIONS
+// =====================================
+
+// Vérifier si un utilisateur a une permission spécifique
+app.post('/api/permissions/check', async (req, res) => {
+  try {
+    const { user_id, permission, context, resource_id } = req.body;
+    
+    if (!user_id || !permission || !context) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'user_id, permission et context sont requis' 
+      });
+    }
+
+    const hasPermission = await permissionModel.userHasPermission(
+      parseInt(user_id),
+      permission,
+      context,
+      resource_id ? parseInt(resource_id) : null
+    );
+
+    res.json({ 
+      success: true, 
+      hasPermission,
+      user_id,
+      permission,
+      context,
+      resource_id
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Récupérer toutes les permissions d'un utilisateur
+app.get('/api/users/:userId/permissions', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const permissions = await permissionModel.getUserPermissions(parseInt(userId));
+    
+    res.json({ 
+      success: true, 
+      permissions,
+      user_id: parseInt(userId)
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// Récupérer toutes les permissions disponibles
+app.get('/api/permissions', async (req, res) => {
+  try {
+    const permissions = await permissionModel.getAllPermissions();
+    
+    res.json({ 
+      success: true, 
+      permissions 
     });
   } catch (error) {
     res.status(500).json({ 
