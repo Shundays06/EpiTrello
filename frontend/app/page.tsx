@@ -56,15 +56,18 @@ export default function Page() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoadingBoards, setIsLoadingBoards] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch boards (seulement ceux accessibles par l'utilisateur)
   const fetchBoards = async () => {
     if (!currentUser) {
       setBoards([])
+      setIsLoadingBoards(false)
       return
     }
 
+    setIsLoadingBoards(true)
     try {
       const response = await fetch(`http://localhost:3001/api/boards?user_id=${currentUser.id}`);
       const data = await response.json();
@@ -75,9 +78,15 @@ export default function Page() {
         } else if (data.boards.length === 0) {
           setSelectedBoardId(null);
         }
+        // Vérifier si le board sélectionné est toujours accessible
+        else if (selectedBoardId && !data.boards.find((b: Board) => b.id === selectedBoardId)) {
+          setSelectedBoardId(data.boards.length > 0 ? data.boards[0].id : null);
+        }
       }
     } catch (err) {
       setError('Erreur lors du chargement des boards');
+    } finally {
+      setIsLoadingBoards(false)
     }
   };
 
@@ -425,8 +434,13 @@ export default function Page() {
     if (currentUser) {
       fetchBoards();
     } else {
+      // Quand l'utilisateur se déconnecte, vider tout immédiatement
       setBoards([]);
       setSelectedBoardId(null);
+      setColumns([]);
+      setCards([]);
+      setError(null);
+      setIsLoadingBoards(false);
     }
   }, [currentUser]);
 
@@ -625,7 +639,71 @@ export default function Page() {
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {columns.length === 0 ? (
+        {!currentUser ? (
+          <div className="text-center py-16">
+            <div className="mb-6">
+              <svg className="mx-auto h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 15v2m-6 4h12a2 2 0 002-2v-4a2 2 0 00-2-2H6a2 2 0 00-2 2v4a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Bienvenue sur EpiTrello !
+            </h2>
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+              Connectez-vous pour accéder à vos boards personnels et collaborer avec votre équipe.
+            </p>
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-md text-lg font-medium transition-colors"
+            >
+              Se connecter
+            </button>
+          </div>
+        ) : isLoadingBoards ? (
+          <div className="text-center py-16">
+            <div className="mb-6">
+              <svg className="animate-spin mx-auto h-12 w-12 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Chargement de vos boards...
+            </h2>
+            <p className="text-gray-600">
+              Récupération de vos tableaux personnels.
+            </p>
+          </div>
+        ) : boards.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="mb-6">
+              <svg className="mx-auto h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Aucun board disponible
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Créez votre premier board pour commencer à organiser vos tâches.
+            </p>
+            <button
+              onClick={() => setShowBoardModal(true)}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-md text-sm font-medium"
+            >
+              Créer mon premier board
+            </button>
+          </div>
+        ) : !selectedBoardId ? (
+          <div className="text-center py-16">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Sélectionnez un board
+            </h2>
+            <p className="text-gray-600">
+              Choisissez un board dans la liste ci-dessus pour commencer.
+            </p>
+          </div>
+        ) : columns.length === 0 ? (
           <div className="text-center py-12">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               Aucune colonne trouvée

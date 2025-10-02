@@ -70,7 +70,8 @@ const BoardSelect: React.FC<BoardSelectProps> = ({
       placeholder={boards.length === 0 ? "Aucun board disponible" : "Sélectionnez un board"}
       styles={customStyles}
       isClearable={false}
-      isSearchable={true}
+      isSearchable={boards.length > 3}
+      isDisabled={boards.length === 0}
       noOptionsMessage={() => "Aucun board trouvé"}
       className="min-w-[200px]"
       formatOptionLabel={(option: any) => (
