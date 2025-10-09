@@ -98,16 +98,16 @@ function DraggableCard({ card, users, onCardClick }: {
       {...attributes}
       {...listeners}
       onClick={handleClick}
-      className={`bg-white rounded-lg shadow-sm p-3 hover:shadow-md transition-all cursor-grab active:cursor-grabbing group ${
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 hover:shadow-md transition-all cursor-grab active:cursor-grabbing group ${
         isDragging ? 'opacity-50 rotate-2' : ''
       }`}
     >
       <div className="flex justify-between items-start mb-2">
-        <h4 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+        <h4 className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
           {card.title}
         </h4>
         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-          <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="h-4 w-4 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
           </svg>
         </div>
@@ -139,15 +139,15 @@ function DraggableCard({ card, users, onCardClick }: {
           ))}
         </div>
       )}
-      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
         {card.description}
       </p>
       <div className="flex justify-between items-center text-xs">
-        <span className="text-gray-400">
+        <span className="text-gray-400 dark:text-gray-500">
           {new Date(card.created_at).toLocaleDateString('fr-FR')}
         </span>
         {assignedUser && (
-          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+          <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full font-medium">
             {assignedUser.username}
           </span>
         )}
@@ -179,16 +179,16 @@ function DroppableColumn({
   return (
     <div 
       ref={setNodeRef}
-      className={`bg-gray-50 rounded-lg p-4 min-w-[300px] max-w-[300px] border-2 transition-colors ${
-        isOver ? 'border-blue-400 bg-blue-50' : 'border-gray-200'
+      className={`bg-gray-50 dark:bg-gray-700 rounded-lg p-4 min-w-[280px] sm:min-w-[300px] max-w-[300px] border-2 transition-colors ${
+        isOver ? 'border-blue-400 bg-blue-50 dark:bg-blue-900' : 'border-gray-200 dark:border-gray-600'
       }`}
     >
       <div className="flex justify-between items-center mb-4">
-        <h3 className="font-semibold text-gray-800">
+        <h3 className="font-semibold text-gray-800 dark:text-gray-200">
           {column.name}
         </h3>
         <div className="flex items-center gap-2">
-          <span className="bg-gray-200 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
+          <span className="bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full text-xs font-medium">
             {columnCards.length}
           </span>
           {onColumnDelete && (
@@ -198,7 +198,7 @@ function DroppableColumn({
                   onColumnDelete(column.id);
                 }
               }}
-              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900 p-1 rounded transition-colors"
               title="Supprimer la colonne"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -214,13 +214,13 @@ function DroppableColumn({
             <DraggableCard key={card.id} card={card} users={users} onCardClick={onCardClick} />
           ))}
           {columnCards.length === 0 && (
-            <div className={`text-gray-500 text-sm italic py-12 text-center border-2 border-dashed rounded-lg transition-all ${
+            <div className={`text-gray-500 dark:text-gray-400 text-sm italic py-12 text-center border-2 border-dashed rounded-lg transition-all ${
               isOver 
-                ? 'border-blue-400 bg-blue-100 text-blue-600' 
-                : 'border-gray-300 bg-gray-25'
+                ? 'border-blue-400 bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300' 
+                : 'border-gray-300 dark:border-gray-600 bg-gray-25'
             }`}>
               <div className="flex flex-col items-center">
-                <svg className={`h-8 w-8 mb-2 ${isOver ? 'text-blue-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className={`h-8 w-8 mb-2 ${isOver ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
                 {isOver ? 'Déposez la carte ici' : 'Glissez une carte ici'}
@@ -318,7 +318,7 @@ export default function KanbanBoard({ columns, cards, users, onCardMove, onCardC
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-6 overflow-x-auto pb-4">
+      <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 px-2 sm:px-0 custom-scrollbar">
         {columns.map((column) => (
           <DroppableColumn
             key={column.id}
@@ -332,11 +332,11 @@ export default function KanbanBoard({ columns, cards, users, onCardMove, onCardC
       </div>
       <DragOverlay>
         {activeCard ? (
-          <div className="bg-white rounded-lg shadow-lg p-3 border rotate-3 opacity-90">
-            <h4 className="font-medium text-gray-900 mb-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border rotate-3 opacity-90">
+            <h4 className="font-medium text-gray-900 dark:text-white mb-2">
               {activeCard.title}
             </h4>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               {activeCard.description}
             </p>
           </div>
