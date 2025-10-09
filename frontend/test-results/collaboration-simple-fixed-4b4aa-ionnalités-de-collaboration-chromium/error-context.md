@@ -1,0 +1,51 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - heading "EpiTrello" [level=1] [ref=e7]
+          - button "Se connecter" [ref=e8] [cursor=pointer]
+        - button [ref=e10] [cursor=pointer]:
+          - img [ref=e11]
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - heading "Connexion" [level=3] [ref=e19]
+        - button "Fermer" [ref=e20] [cursor=pointer]:
+          - generic [ref=e21]: Fermer
+          - img [ref=e22]
+      - generic [ref=e26]:
+        - generic [ref=e27]: Email et mot de passe requis
+        - generic [ref=e28]:
+          - generic [ref=e29]: Email
+          - textbox "Email" [ref=e30]:
+            - /placeholder: votre@email.com
+            - text: admin@epitrello.com
+        - generic [ref=e31]:
+          - generic [ref=e32]: Mot de passe
+          - textbox "Mot de passe" [ref=e33]:
+            - /placeholder: ••••••••
+            - text: admin123
+        - button "Se connecter" [ref=e34] [cursor=pointer]
+        - button "Pas encore de compte ? S'inscrire" [ref=e36] [cursor=pointer]
+        - generic [ref=e37]:
+          - paragraph [ref=e38]: "Ou connectez-vous avec un compte de démo :"
+          - generic [ref=e39]:
+            - button "👑 Admin" [active] [ref=e40] [cursor=pointer]
+            - button "📊 Manager" [ref=e41] [cursor=pointer]
+            - button "👤 Membre" [ref=e42] [cursor=pointer]
+            - button "👁️ Lecteur" [ref=e43] [cursor=pointer]
+    - main [ref=e44]:
+      - generic [ref=e45]:
+        - img [ref=e47]
+        - heading "Bienvenue sur EpiTrello !" [level=2] [ref=e49]
+        - paragraph [ref=e50]: Connectez-vous pour accéder à vos boards personnels et collaborer avec votre équipe.
+        - generic [ref=e51]:
+          - button "Se connecter" [ref=e52] [cursor=pointer]
+          - button "S'inscrire" [ref=e53] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e59] [cursor=pointer]:
+    - img [ref=e60]
+  - alert [ref=e63]
+```

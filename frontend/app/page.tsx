@@ -607,6 +607,22 @@ export default function Page() {
               >
                 Nouveau board
               </button>
+              {currentUser && (
+                <button
+                  onClick={() => setShowInvitationsModal(true)}
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                >
+                  Invitations
+                </button>
+              )}
+              {currentUser && (
+                <button
+                  onClick={() => setShowOrganizationsModal(true)}
+                  className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                >
+                  Organisations
+                </button>
+              )}
             </div>
             {/* Mobile menu button */}
             <div className="md:hidden">

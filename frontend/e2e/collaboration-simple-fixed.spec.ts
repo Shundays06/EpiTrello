@@ -118,14 +118,12 @@ test.describe('Tests de Collaboration - Version Simple', () => {
     await page.keyboard.press('Escape');
     await page.waitForTimeout(2000);
     
-    // Vérifier que les boutons de collaboration sont présents
-    const collaborationButtons = [
-      'Nouveau board',
-      'Inviter',
-      'Organisations'
+    // Vérifier que les boutons de base sont présents
+    const basicButtons = [
+      'Nouveau board'
     ];
     
-    for (const buttonName of collaborationButtons) {
+    for (const buttonName of basicButtons) {
       const button = page.getByRole('button', { name: buttonName });
       if (await button.isVisible()) {
         console.log(`✅ Bouton "${buttonName}" présent`);
@@ -133,6 +131,39 @@ test.describe('Tests de Collaboration - Version Simple', () => {
         console.log(`⚠️ Bouton "${buttonName}" non visible`);
       }
     }
+    
+    // Vérifier les fonctionnalités dans le menu mobile
+    console.log('📱 Vérification du menu mobile...');
+    
+    // Simuler une taille d'écran mobile pour tester le menu mobile
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.waitForTimeout(1000);
+    
+    // Ouvrir le menu mobile
+    const mobileMenuButton = page.locator('svg[viewBox="0 0 24 24"]').locator('..');
+    if (await mobileMenuButton.isVisible()) {
+      await mobileMenuButton.click();
+      await page.waitForTimeout(1000);
+      
+      // Vérifier les boutons du menu mobile
+      const mobileButtons = [
+        'Invitations',
+        'Organisations'
+      ];
+      
+      for (const buttonName of mobileButtons) {
+        const button = page.getByRole('button', { name: buttonName });
+        if (await button.isVisible()) {
+          console.log(`✅ Bouton mobile "${buttonName}" présent`);
+        } else {
+          console.log(`⚠️ Bouton mobile "${buttonName}" non visible`);
+        }
+      }
+    }
+    
+    // Remettre en mode desktop
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.waitForTimeout(1000);
     
     console.log('🎉 Vérification des fonctionnalités terminée');
   });
