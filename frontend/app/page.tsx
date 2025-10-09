@@ -607,79 +607,6 @@ export default function Page() {
               >
                 Nouveau board
               </button>
-              {selectedBoardId && currentUser && canCreateContent() && (
-                <button
-                  onClick={() => handleDeleteBoard(selectedBoardId)}
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  title="Supprimer ce board"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              )}
-              <button
-                onClick={() => setShowColumnModal(true)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                title="Créer une colonne"
-              >
-                Créer une colonne
-              </button>
-              <button
-                onClick={() => setShowCardModal(true)}
-                className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                title="Nouvelle carte"
-              >
-                Nouvelle carte
-              </button>
-              {selectedBoardId && currentUser && canCreateContent() && (
-                <button
-                  onClick={() => setShowInviteModal(true)}
-                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  title="Inviter un utilisateur"
-                >
-                  <svg className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Inviter
-                </button>
-              )}
-              {currentUser && (
-                <button
-                  onClick={() => setShowInvitationsModal(true)}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  title="Voir mes invitations"
-                >
-                  <svg className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 7.89a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Invitations
-                </button>
-              )}
-              {currentUser && (
-                <button
-                  onClick={() => setShowOrganizationsModal(true)}
-                  className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  title="Gérer mes organisations"
-                >
-                  <svg className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                  Organisations
-                </button>
-              )}
-              {selectedBoardId && currentUser && canCreateContent() && (
-                <button
-                  onClick={() => setShowLabelsModal(true)}
-                  className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  title="Gérer les labels"
-                >
-                  <svg className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                  </svg>
-                  Labels
-                </button>
-              )}
             </div>
             {/* Mobile menu button */}
             <div className="md:hidden">
@@ -713,39 +640,6 @@ export default function Page() {
                 >
                   Nouveau board
                 </button>
-                {selectedBoardId && currentUser && canCreateContent() && (
-                  <button
-                    onClick={() => handleDeleteBoard(selectedBoardId)}
-                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                    title="Supprimer ce board"
-                  >
-                    Supprimer ce board
-                  </button>
-                )}
-                {selectedBoardId && currentUser && canCreateContent() && (
-                  <button
-                    onClick={() => setShowColumnModal(true)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    Créer une colonne
-                  </button>
-                )}
-                {selectedBoardId && currentUser && canCreateContent() && (
-                  <button
-                    onClick={() => setShowCardModal(true)}
-                    className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    Nouvelle carte
-                  </button>
-                )}
-                {selectedBoardId && currentUser && canCreateContent() && (
-                  <button
-                    onClick={() => setShowInviteModal(true)}
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    Inviter
-                  </button>
-                )}
                 {currentUser && (
                   <button
                     onClick={() => setShowInvitationsModal(true)}
@@ -760,14 +654,6 @@ export default function Page() {
                     className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-md text-sm font-medium"
                   >
                     Organisations
-                  </button>
-                )}
-                {selectedBoardId && currentUser && canCreateContent() && (
-                  <button
-                    onClick={() => setShowLabelsModal(true)}
-                    className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    Labels
                   </button>
                 )}
               </div>
@@ -1002,14 +888,103 @@ export default function Page() {
             </button>
           </div>
         ) : (
-          <KanbanBoard
-            columns={columns}
-            cards={cards}
-            users={users}
-            onCardMove={handleCardMove}
-            onCardClick={handleCardClick}
-            onColumnDelete={handleDeleteColumn}
-          />
+          <div className="space-y-6">
+            {/* Board Actions Bar */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center space-x-4">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Actions du board
+                  </h2>
+                  <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <span>{columns.length} colonnes • {cards.length} cartes</span>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-3">
+                  {selectedBoardId && currentUser && canCreateContent() && (
+                    <button
+                      onClick={() => setShowColumnModal(true)}
+                      className="inline-flex items-center px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                      title="Ajouter une colonne"
+                    >
+                      <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Colonne
+                    </button>
+                  )}
+                  
+                  {selectedBoardId && currentUser && canCreateContent() && (
+                    <button
+                      onClick={() => setShowCardModal(true)}
+                      className="inline-flex items-center px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                      title="Créer une carte"
+                    >
+                      <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Carte
+                    </button>
+                  )}
+                  
+                  {selectedBoardId && currentUser && canCreateContent() && (
+                    <button
+                      onClick={() => setShowInviteModal(true)}
+                      className="inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                      title="Inviter un utilisateur"
+                    >
+                      <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                      </svg>
+                      Inviter
+                    </button>
+                  )}
+                  
+                  {selectedBoardId && currentUser && canCreateContent() && (
+                    <button
+                      onClick={() => setShowLabelsModal(true)}
+                      className="inline-flex items-center px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                      title="Gérer les labels"
+                    >
+                      <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                      Labels
+                    </button>
+                  )}
+                  
+                  {selectedBoardId && currentUser && canCreateContent() && (
+                    <div className="border-l border-gray-300 dark:border-gray-600 pl-3 ml-3">
+                      <button
+                        onClick={() => handleDeleteBoard(selectedBoardId)}
+                        className="inline-flex items-center px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                        title="Supprimer ce board"
+                      >
+                        <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Supprimer
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Kanban Board */}
+            <KanbanBoard
+              columns={columns}
+              cards={cards}
+              users={users}
+              onCardMove={handleCardMove}
+              onCardClick={handleCardClick}
+              onColumnDelete={handleDeleteColumn}
+            />
+          </div>
         )}
       </main>
     </div>
