@@ -194,9 +194,29 @@ export default function Page() {
     }
   };
 
-  // Get cards for a column
-  const getCardsForColumn = (columnId: number) => {
-    return cards.filter(card => card.column_id === columnId);
+  // Check if user can create content on the selected board
+  const canCreateContent = () => {
+    if (!currentUser || !selectedBoardId) return false;
+    const board = boards.find(b => b.id === selectedBoardId);
+    if (!board) return false;
+    
+    // Owner can always create
+    // Admin roles can create
+    // Members might have restricted permissions
+    const userRole = board.user_role;
+    const orgRole = board.organization_role;
+    
+    // If user is owner of the board
+    if (userRole === 'owner') return true;
+    
+    // If user has admin role in organization
+    if (orgRole === 'admin' || orgRole === 'owner') return true;
+    
+    // If user has admin role on the board
+    if (userRole === 'admin') return true;
+    
+    // Default: allow for now, but could be restricted
+    return true;
   };
 
   // Create default columns
@@ -587,7 +607,7 @@ export default function Page() {
               >
                 Nouveau board
               </button>
-              {selectedBoardId && (
+              {selectedBoardId && currentUser && canCreateContent() && (
                 <button
                   onClick={() => handleDeleteBoard(selectedBoardId)}
                   className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium"
@@ -601,16 +621,18 @@ export default function Page() {
               <button
                 onClick={() => setShowColumnModal(true)}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                title="Créer une colonne"
               >
                 Créer une colonne
               </button>
               <button
                 onClick={() => setShowCardModal(true)}
                 className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                title="Nouvelle carte"
               >
                 Nouvelle carte
               </button>
-              {selectedBoardId && currentUser && (
+              {selectedBoardId && currentUser && canCreateContent() && (
                 <button
                   onClick={() => setShowInviteModal(true)}
                   className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium"
@@ -646,7 +668,7 @@ export default function Page() {
                   Organisations
                 </button>
               )}
-              {selectedBoardId && currentUser && (
+              {selectedBoardId && currentUser && canCreateContent() && (
                 <button
                   onClick={() => setShowLabelsModal(true)}
                   className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium"
@@ -691,7 +713,7 @@ export default function Page() {
                 >
                   Nouveau board
                 </button>
-                {selectedBoardId && (
+                {selectedBoardId && currentUser && canCreateContent() && (
                   <button
                     onClick={() => handleDeleteBoard(selectedBoardId)}
                     className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium"
@@ -700,19 +722,23 @@ export default function Page() {
                     Supprimer ce board
                   </button>
                 )}
-                <button
-                  onClick={() => setShowColumnModal(true)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  Créer une colonne
-                </button>
-                <button
-                  onClick={() => setShowCardModal(true)}
-                  className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  Nouvelle carte
-                </button>
-                {selectedBoardId && currentUser && (
+                {selectedBoardId && currentUser && canCreateContent() && (
+                  <button
+                    onClick={() => setShowColumnModal(true)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  >
+                    Créer une colonne
+                  </button>
+                )}
+                {selectedBoardId && currentUser && canCreateContent() && (
+                  <button
+                    onClick={() => setShowCardModal(true)}
+                    className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  >
+                    Nouvelle carte
+                  </button>
+                )}
+                {selectedBoardId && currentUser && canCreateContent() && (
                   <button
                     onClick={() => setShowInviteModal(true)}
                     className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium"
@@ -736,7 +762,7 @@ export default function Page() {
                     Organisations
                   </button>
                 )}
-                {selectedBoardId && currentUser && (
+                {selectedBoardId && currentUser && canCreateContent() && (
                   <button
                     onClick={() => setShowLabelsModal(true)}
                     className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium"
